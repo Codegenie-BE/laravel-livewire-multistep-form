@@ -1,0 +1,59 @@
+# Log- en cachebestanden
+*.log
+phpunit.result.cache
+.phpunit.cache
+/.phpunit.cache
+/storage/logs
+/storage/debugbar
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+
+# IDE- en editorbestanden
+.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+/.fleet
+/.zed
+.phpactor.json
+
+# Omgevingsbestanden en authenticatiegegevens
+.env
+auth.json
+
+# Node- en frontend-buildbestanden
+/node_modules
+/public/build
+/public/hot
+/public/mix-manifest.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Composer-dependencies
+/vendor
+
+# Opslagmappen voor tijdelijke bestanden en uploads
+public/storage
+/storage/*.key
+/storage/pail
+/storage/app/*.tmp
+/storage/app/public/*
+
+# Test- en code coverage tools
+coverage/
+clover.xml
+.php_cs.cache
+
+# Laravel Nova / Horizon / Jetstream (indien gebruikt)
+.nova
+
+# CI/CD- of Docker-configuratie (optioneel)
+/.env.testing
+/.env.staging
+/.docker/
+/docker-compose.yml
+
+# Tailwind/Vite cachebestanden (optioneel)
+/.vite/
