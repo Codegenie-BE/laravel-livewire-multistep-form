@@ -2,56 +2,111 @@
 
 namespace App\Livewire;
 
+use Illuminate\Support\Facades\Validator;
 use Livewire\Component;
 
 class MultiStepForm extends Component
 {
-    // DON'T CHANGE THIS START
     public int $step = 1;
+    public array $formData = [];
 
     public string $primaryColor = '#2563eb';
     public string $buttonColor = '#2563eb';
-    // DON'T CHANGE THIS END
 
-    // FORM INPUTS
-    public string $name = '';
-    public string $email = '';
-    public string $message = '';
+    public array $fields = [];
 
-    public function rules(): array
+    public function mount(): void
     {
-        return match ($this->step) {
-            1 => ['name' => 'required|min:2'],
-            2 => ['email' => 'required|email'],
-            3 => ['message' => 'required|min:10'],
-            default => [],
-        };
+        if (empty($this->fields)) {
+            abort(500, 'No fields defined for the form.');
+        }
+
+        $this->formData = collect($this->fields)
+            ->mapWithKeys(fn ($data, $field) => [$field => $data['default']])
+            ->toArray();
     }
 
-    public function nextStep()
+    protected function totalSteps(): int
     {
-        $this->validate($this->rules());
-        $this->step++;
+        return collect($this->fields)->pluck('step')->max();
     }
 
-    public function previousStep()
+    public function nextStep(): void
     {
-        $this->step--;
+        $this->validateStep();
+
+        if ($this->step < $this->totalSteps()) {
+            $this->step++;
+        }
     }
 
-    public function submit()
+    public function previousStep(): void
     {
-        $this->validate([
-            'name' => 'required|min:2',
-            'email' => 'required|email',
-            'message' => 'required|min:10',
-        ]);
+        if ($this->step > 1) {
+            $this->step--;
+        }
+    }
+
+    public function submit(): \Illuminate\Http\RedirectResponse
+    {
+        $this->validateAll();
 
         session()->flash('success', 'Form submitted successfully!');
-        $this->reset(['name', 'email', 'message']);
+        $this->reset(['formData']);
         $this->step = 1;
 
-        return redirect()->to('/'); // zorg voor redirect na submit
+        return redirect()->route('thankyou');
+    }
+
+    protected function validateFields(array $rules): void
+    {
+        Validator::make(
+            $this->formData,
+            $rules,
+            [],
+            $this->attributeLabels()
+        )->validate();
+    }
+
+    protected function validateStep(): void
+    {
+        $this->validateFields($this->rulesForCurrentStep());
+    }
+
+    protected function validateAll(): void
+    {
+        $this->validateFields($this->allRules());
+    }
+
+    protected function rulesForCurrentStep(): array
+    {
+        return collect($this->fields)
+            ->filter(fn ($data) => $data['step'] === $this->step)
+            ->mapWithKeys(fn ($data, $field) => [$field => $data['rules']])
+            ->toArray();
+    }
+
+    protected function allRules(): array
+    {
+        return collect($this->fields)
+            ->mapWithKeys(fn ($data, $field) => [$field => $data['rules']])
+            ->toArray();
+    }
+
+    protected function attributeLabels(): array
+    {
+        return collect($this->fields)
+            ->mapWithKeys(fn ($data, $field) => [$field => $data['label'] ?? ucfirst($field)])
+            ->toArray();
+    }
+
+    public function getFormData(): array
+    {
+        return collect($this->fields)
+            ->mapWithKeys(fn ($data, $field) => [
+                $data['label'] ?? ucfirst($field) => $this->formData[$field] ?? ''
+            ])
+            ->toArray();
     }
 
     public function render()
