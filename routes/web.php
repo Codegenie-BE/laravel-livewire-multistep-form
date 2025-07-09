@@ -2,9 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::view('/', 'home')->name('home');
 Route::get('/thankyou', function () {
-    if (!session()->has('success')) {
+    if (!session()->pull('form_submitted')) {
         return redirect()->route('home');
     }
 

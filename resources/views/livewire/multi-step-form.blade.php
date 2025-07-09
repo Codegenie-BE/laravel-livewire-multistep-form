@@ -1,6 +1,6 @@
 @php
     $stepFields = collect($this->fields)->filter(fn($config) => $config['step'] === $step);
-    $totalSteps = collect($this->fields)->pluck('step')->unique()->count()+1;
+    $totalSteps = collect($this->fields)->pluck('step')->unique()->count()+1; // +1 The review data 'page'
 @endphp
 
 <div class="max-w-xl mx-auto bg-white p-6 rounded shadow-md">
@@ -18,12 +18,6 @@
                     style="width: {{ ($step / $totalSteps) * 100 }}%; background-color: {{ $primaryColor ?? '#3b82f6' }}">
                 </div>
             </div>
-        </div>
-    @endif
-
-    @if (session('success'))
-        <div class="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded">
-            {{ session('success') }}
         </div>
     @endif
 

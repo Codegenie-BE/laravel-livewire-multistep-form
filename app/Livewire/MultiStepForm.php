@@ -2,7 +2,9 @@
 
 namespace App\Livewire;
 
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\{
+    Validator
+};
 use Livewire\Component;
 
 class MultiStepForm extends Component
@@ -28,7 +30,7 @@ class MultiStepForm extends Component
 
     protected function totalSteps(): int
     {
-        return collect($this->fields)->pluck('step')->max();
+        return collect($this->fields)->pluck('step')->max()+1; // +1 The review data 'page'
     }
 
     public function nextStep(): void
@@ -47,15 +49,17 @@ class MultiStepForm extends Component
         }
     }
 
-    public function submit(): \Illuminate\Http\RedirectResponse
+    public function submit()
     {
         $this->validateAll();
 
-        session()->flash('success', 'Form submitted successfully!');
         $this->reset(['formData']);
         $this->step = 1;
 
-        return redirect()->route('thankyou');
+        session()->put('form_submitted', true);
+
+        return redirect()
+            ->route('thankyou');
     }
 
     protected function validateFields(array $rules): void

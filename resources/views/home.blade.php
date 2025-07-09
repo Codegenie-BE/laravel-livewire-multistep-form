@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Livewire Multi-Step Wizard')
-@section('subtitle', 'This form uses Livewire and Tailwind, and is fully validated.')
+@section('title', config('ui.home.title'))
+@section('subtitle', config('ui.home.subtitle'))
 
 @section('content')
 
