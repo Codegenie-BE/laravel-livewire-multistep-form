@@ -9,10 +9,15 @@ on:
 permissions:
     contents: read
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
     compatibility:
-        name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel-name }} / Livewire ${{ matrix.livewire-name }}
+        name: Latest PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel-name }} / Livewire ${{ matrix.livewire-name }}
         runs-on: ubuntu-latest
+        timeout-minutes: 15
         strategy:
             fail-fast: false
             matrix:
@@ -33,6 +38,14 @@ jobs:
                       testbench: '^10.0'
                       pest: '^3.8'
                       pest-plugin: '^3.2'
+                    - php: '8.4'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
                     - php: '8.5'
                       laravel: '^12.0'
                       laravel-name: '12'
@@ -57,6 +70,14 @@ jobs:
                       testbench: '^11.0'
                       pest: '^4.0'
                       pest-plugin: '^4.0'
+                    - php: '8.4'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
                     - php: '8.5'
                       laravel: '^13.0'
                       laravel-name: '13'
@@ -68,10 +89,10 @@ jobs:
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@v2
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
               with:
                   php-version: ${{ matrix.php }}
                   coverage: none
@@ -92,16 +113,86 @@ jobs:
             - name: Run tests
               run: composer test
 
-    quality:
-        name: Quality gates
+    minimum-compatibility:
+        name: Minimum Laravel ${{ matrix.laravel-name }} / Livewire ${{ matrix.livewire-name }}
         runs-on: ubuntu-latest
+        timeout-minutes: 15
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - php: '8.2'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^3.6'
+                      livewire-name: '3'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
+                    - php: '8.2'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
+                    - php: '8.3'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^3.6'
+                      livewire-name: '3'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
+                    - php: '8.3'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v6
+              uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
             - name: Setup PHP
-              uses: shivammathur/setup-php@v2
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Resolve minimum compatibility set
+              run: >-
+                  composer update
+                  --with="laravel/framework:${{ matrix.laravel }}"
+                  --with="livewire/livewire:${{ matrix.livewire }}"
+                  --with="orchestra/testbench:${{ matrix.testbench }}"
+                  --with="pestphp/pest:${{ matrix.pest }}"
+                  --with="pestphp/pest-plugin-laravel:${{ matrix.pest-plugin }}"
+                  --prefer-lowest
+                  --prefer-stable
+                  --prefer-dist
+                  --no-interaction
+                  --no-progress
+
+            - name: Run tests
+              run: composer test
+
+    quality:
+        name: Quality gates
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
               with:
                   php-version: '8.5'
                   coverage: none
