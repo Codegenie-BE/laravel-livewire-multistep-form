@@ -403,10 +403,8 @@ class MultiStepForm extends Component
         $rules = $this->serverValidationRules();
 
         foreach ($rules as $field => $fieldRules) {
-            if (! is_string($field) || ! array_key_exists($field, $this->fields)) {
-                $name = is_string($field) ? $field : (string) $field;
-
-                throw new InvalidArgumentException("Server validation rules reference unknown field [{$name}].");
+            if (! array_key_exists($field, $this->fields)) {
+                throw new InvalidArgumentException("Server validation rules reference unknown field [{$field}].");
             }
 
             if ($this->ruleList($fieldRules) === []) {
