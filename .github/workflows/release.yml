@@ -7,7 +7,6 @@ on:
             - main
         paths:
             - VERSION
-            - .github/workflows/release.yml
 
 permissions:
     contents: write
@@ -17,12 +16,6 @@ jobs:
         name: Publish stable release
         runs-on: ubuntu-latest
         timeout-minutes: 15
-
-        env:
-            PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
-            PACKAGIST_MAIN_TOKEN: ${{ secrets.PACKAGIST_MAIN_TOKEN }}
-            PACKAGIST_SAFE_TOKEN: ${{ secrets.PACKAGIST_SAFE_TOKEN }}
-            PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
 
         steps:
             - name: Checkout
@@ -45,6 +38,7 @@ jobs:
                   echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
             - name: Ensure version tag exists
+              id: release
               env:
                   TAG: ${{ steps.metadata.outputs.tag }}
               shell: bash
@@ -52,62 +46,18 @@ jobs:
                   git fetch --tags --force
 
                   if git rev-parse "$TAG" >/dev/null 2>&1; then
-                      echo "Tag $TAG already exists; keeping the existing release target."
-                      exit 0
+                      release_commit="$(git rev-list --max-count=1 "$TAG")"
+                      echo "Tag $TAG already exists at $release_commit."
+                  else
+                      git config user.name "github-actions[bot]"
+                      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                      git tag -a "$TAG" "$GITHUB_SHA" -m "$TAG"
+                      git push origin "$TAG"
+                      release_commit="$GITHUB_SHA"
+                      echo "Created $TAG at $release_commit."
                   fi
 
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git tag -a "$TAG" "$GITHUB_SHA" -m "$TAG"
-                  git push origin "$TAG"
-
-            - name: Publish or update Packagist
-              id: packagist
-              continue-on-error: true
-              env:
-                  REPOSITORY_URL: https://github.com/Codegenie-BE/laravel-livewire-multistep-form
-                  PACKAGE_METADATA_URL: https://repo.packagist.org/p2/codegenie-be/laravel-livewire-multistep-form.json
-              shell: bash
-              run: |
-                  username="${PACKAGIST_USERNAME:-codegenie-be}"
-                  status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PACKAGE_METADATA_URL" || true)"
-
-                  if [[ "$status" == "200" ]]; then
-                      token="${PACKAGIST_SAFE_TOKEN:-${PACKAGIST_MAIN_TOKEN:-${PACKAGIST_API_TOKEN:-}}}"
-
-                      if [[ -z "$token" ]]; then
-                          echo "::error::Packagist package exists, but no SAFE or MAIN API token is configured in GitHub Actions secrets."
-                          exit 2
-                      fi
-
-                      curl --fail-with-body --silent --show-error \
-                          --request POST \
-                          --header 'Content-Type: application/json' \
-                          --header "Authorization: Bearer ${username}:${token}" \
-                          --header 'User-Agent: Codegenie-Packagist-Publisher/1.0' \
-                          https://packagist.org/api/update-package \
-                          --data "{\"repository\":\"$REPOSITORY_URL\"}"
-
-                      echo "operation=updated" >> "$GITHUB_OUTPUT"
-                      exit 0
-                  fi
-
-                  token="${PACKAGIST_MAIN_TOKEN:-${PACKAGIST_API_TOKEN:-}}"
-
-                  if [[ -z "$token" ]]; then
-                      echo "::error::The package is not yet on Packagist and no MAIN API token is configured in GitHub Actions secrets."
-                      exit 2
-                  fi
-
-                  curl --fail-with-body --silent --show-error \
-                      --request POST \
-                      --header 'Content-Type: application/json' \
-                      --header "Authorization: Bearer ${username}:${token}" \
-                      --header 'User-Agent: Codegenie-Packagist-Publisher/1.0' \
-                      https://packagist.org/api/create-package \
-                      --data "{\"repository\":\"$REPOSITORY_URL\"}"
-
-                  echo "operation=created" >> "$GITHUB_OUTPUT"
+                  echo "commit=$release_commit" >> "$GITHUB_OUTPUT"
 
             - name: Ensure GitHub release exists
               env:
@@ -126,11 +76,29 @@ jobs:
                       --title "$TAG" \
                       --generate-notes
 
-            - name: Report Packagist status
-              if: steps.packagist.outcome != 'success'
+            - name: Verify Packagist auto-update
+              env:
+                  RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+                  RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+                  PACKAGE_METADATA_URL: https://repo.packagist.org/p2/codegenie-be/laravel-livewire-multistep-form.json
               shell: bash
               run: |
-                  echo "::warning::Packagist could not be created/updated automatically. Configure PACKAGIST_MAIN_TOKEN for first publication or a SAFE/MAIN token for updates, then run this workflow manually."
+                  for attempt in $(seq 1 30); do
+                      if curl --fail --silent --show-error "$PACKAGE_METADATA_URL" \
+                          | jq --exit-status \
+                              --arg tag "$RELEASE_TAG" \
+                              --arg commit "$RELEASE_COMMIT" \
+                              '.packages["codegenie-be/laravel-livewire-multistep-form"] | any(.version == $tag and .source.reference == $commit)' >/dev/null 2>&1; then
+                          echo "Packagist exposes $RELEASE_TAG at $RELEASE_COMMIT."
+                          exit 0
+                      fi
+
+                      echo "Waiting for Packagist auto-update (${attempt}/30)..."
+                      sleep 10
+                  done
+
+                  echo "::error::Packagist did not expose $RELEASE_TAG at $RELEASE_COMMIT within five minutes. For the first publication, submit https://github.com/Codegenie-BE/laravel-livewire-multistep-form once on Packagist and enable its GitHub auto-update integration."
+                  exit 1
 
             - name: Delete every non-main branch
               if: always()
