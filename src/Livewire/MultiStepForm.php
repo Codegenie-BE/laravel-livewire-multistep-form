@@ -47,7 +47,7 @@ class MultiStepForm extends Component
     public array $fields = [];
 
     /**
-     * @param array<array-key, mixed> $fields
+     * @param  array<array-key, mixed>  $fields
      */
     public function mount(
         array $fields = [],
@@ -146,7 +146,7 @@ class MultiStepForm extends Component
     }
 
     /**
-     * @param FieldConfig $config
+     * @param  FieldConfig  $config
      */
     public function isFieldRequired(array $config): bool
     {
@@ -160,7 +160,7 @@ class MultiStepForm extends Component
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     protected function handleSubmission(array $data): void
     {
@@ -218,7 +218,7 @@ class MultiStepForm extends Component
     }
 
     /**
-     * @param array<array-key, mixed> $fields
+     * @param  array<array-key, mixed>  $fields
      * @return array<string, FieldConfig>
      */
     protected function validateAndNormalizeFields(array $fields): array
@@ -259,7 +259,7 @@ class MultiStepForm extends Component
     }
 
     /**
-     * @param array<array-key, mixed> $config
+     * @param  array<array-key, mixed>  $config
      * @return FieldConfig
      */
     protected function normalizeField(string $field, array $config): array
