@@ -427,7 +427,7 @@ class MultiStepForm extends Component
         }
 
         if (is_string($rules)) {
-            return trim($rules) === '' ? [] : [$rules];
+            return trim($rules) === '' ? [] : explode('|', $rules);
         }
 
         if (is_array($rules)) {
