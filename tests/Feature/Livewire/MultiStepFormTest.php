@@ -70,6 +70,24 @@ test('the package component completes the basic wizard flow', function () {
         ]);
 });
 
+test('submission event exposes the exact validated configured payload', function () {
+    Livewire::test(MultiStepForm::class, [
+        'fields' => [
+            'name' => [
+                'rules' => 'required|string',
+                'label' => 'Name',
+                'step' => 1,
+                'type' => 'text',
+            ],
+        ],
+    ])
+        ->set('formData.name', 'Jordy')
+        ->set('formData.admin', 'must-not-leak')
+        ->call('nextStep')
+        ->call('submit')
+        ->assertDispatched('multistep-form-submitted', data: ['name' => 'Jordy']);
+});
+
 test('the current step is validated before advancing', function () {
     Livewire::test(MultiStepForm::class, ['fields' => packageFields()])
         ->set('formData.name', '')
@@ -252,6 +270,18 @@ test('select defaults must exist in configured options', function () {
     expect(fn () => $component->mount(selectFields([
         'default' => 'unknown',
     ])))->toThrow(InvalidArgumentException::class, 'default value that is not present');
+});
+
+test('select defaults reject boolean and floating point values', function () {
+    expect(fn () => (new MultiStepForm)->mount(selectFields([
+        'default' => true,
+        'options' => [1 => 'Yes'],
+    ])))->toThrow(InvalidArgumentException::class, 'string, integer or null');
+
+    expect(fn () => (new MultiStepForm)->mount(selectFields([
+        'default' => 1.5,
+        'options' => ['1.5' => 'One and a half'],
+    ])))->toThrow(InvalidArgumentException::class, 'string, integer or null');
 });
 
 test('numeric select option values are normalized for browser submissions', function () {
