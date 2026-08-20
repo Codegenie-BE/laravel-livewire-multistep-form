@@ -9,7 +9,7 @@
 @endphp
 
 <form
-    wire:submit="submit"
+    wire:submit="{{ $isReviewStep ? 'submit' : 'nextStep' }}"
     x-data="{ componentId: @js($this->getId()) }"
     x-on:multistep-focus-heading.window="
         if ($event.detail.instanceId === componentId) {
