@@ -258,10 +258,6 @@ class MultiStepForm extends Component
         $steps = array_values(array_unique($steps));
         sort($steps);
 
-        if ($steps === []) {
-            throw new InvalidArgumentException('At least one form step must be defined.');
-        }
-
         $expectedSteps = range(1, max($steps));
 
         if ($steps !== $expectedSteps) {
