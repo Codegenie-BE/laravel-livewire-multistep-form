@@ -31,6 +31,24 @@ function packageFields(): array
     ];
 }
 
+function selectFields(array $overrides = []): array
+{
+    return [
+        'topic' => array_merge([
+            'default' => '',
+            'rules' => 'required|string',
+            'label' => 'Topic',
+            'step' => 1,
+            'type' => 'select',
+            'placeholder' => 'Choose a topic',
+            'options' => [
+                'general' => 'General question',
+                'support' => 'Technical support',
+            ],
+        ], $overrides),
+    ];
+}
+
 test('the package component completes the basic wizard flow', function () {
     Livewire::test(MultiStepForm::class, ['fields' => packageFields()])
         ->set('formData.name', 'Jordy')
@@ -200,4 +218,54 @@ test('review escapes user supplied html', function () {
         ->call('nextStep')
         ->assertSee('<script>alert(1)</script>')
         ->assertDontSeeHtml('<script>alert(1)</script>');
+});
+
+test('select fields render their placeholder and configured options', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => selectFields()])
+        ->assertSee('Choose a topic')
+        ->assertSee('General question')
+        ->assertSee('Technical support')
+        ->assertSeeHtml('<option value="general">General question</option>')
+        ->assertSeeHtml('<option value="support">Technical support</option>');
+});
+
+test('select values are constrained to configured options server side', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => selectFields()])
+        ->set('formData.topic', 'admin')
+        ->call('nextStep')
+        ->assertHasErrors(['formData.topic' => 'in'])
+        ->assertSet('step', 1);
+});
+
+test('select review displays the human readable option label', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => selectFields()])
+        ->set('formData.topic', 'support')
+        ->call('nextStep')
+        ->assertSet('step', 2)
+        ->assertSee('Technical support')
+        ->assertDontSee('>support<', false);
+});
+
+test('select defaults must exist in configured options', function () {
+    $component = new MultiStepForm;
+
+    expect(fn () => $component->mount(selectFields([
+        'default' => 'unknown',
+    ])))->toThrow(InvalidArgumentException::class, 'default value that is not present');
+});
+
+test('numeric select option values are normalized for browser submissions', function () {
+    $fields = selectFields([
+        'default' => 2,
+        'options' => [
+            1 => 'First',
+            2 => 'Second',
+        ],
+    ]);
+
+    Livewire::test(MultiStepForm::class, ['fields' => $fields])
+        ->assertSet('formData.topic', '2')
+        ->set('formData.topic', '1')
+        ->call('nextStep')
+        ->assertSee('First');
 });
