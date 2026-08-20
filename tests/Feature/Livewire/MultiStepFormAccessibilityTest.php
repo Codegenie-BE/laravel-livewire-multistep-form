@@ -28,6 +28,37 @@ test('the wizard renders semantic form and progress markup', function () {
         ->assertSeeHtml('id="multistep-');
 });
 
+test('the wizard renders instance scoped focus handlers', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
+        ->assertSeeHtml('x-on:multistep-focus-heading.window=')
+        ->assertSeeHtml('x-on:multistep-focus-field.window=')
+        ->assertSeeHtml('x-ref="stepHeading"')
+        ->assertSeeHtml('tabindex="-1"')
+        ->assertSeeHtml('data-multistep-field="name"');
+});
+
+test('successful navigation requests focus for the updated step heading', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
+        ->set('formData.name', 'Jordy')
+        ->call('nextStep')
+        ->assertDispatched('multistep-focus-heading');
+});
+
+test('validation failures request focus for the first invalid field', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
+        ->set('formData.name', '')
+        ->call('nextStep')
+        ->assertDispatched('multistep-focus-field', field: 'name');
+});
+
+test('reset requests focus for the first step heading', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
+        ->set('formData.name', 'Jordy')
+        ->call('resetForm')
+        ->assertSet('step', 1)
+        ->assertDispatched('multistep-focus-heading');
+});
+
 test('validation errors are announced as alerts with instance scoped relationships', function () {
     Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
         ->set('formData.name', '')

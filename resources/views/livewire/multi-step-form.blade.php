@@ -8,10 +8,31 @@
     $reviewHeadingId = $idPrefix . '-review-heading';
 @endphp
 
-<form wire:submit="submit" class="max-w-xl mx-auto bg-white p-6 rounded shadow-md" aria-labelledby="{{ $headingId }}">
+<form
+    wire:submit="submit"
+    x-data="{ componentId: @js($this->getId()) }"
+    x-on:multistep-focus-heading.window="
+        if ($event.detail.instanceId === componentId) {
+            $nextTick(() => $refs.stepHeading?.focus())
+        }
+    "
+    x-on:multistep-focus-field.window="
+        if ($event.detail.instanceId === componentId && typeof $event.detail.field === 'string') {
+            $nextTick(() => $el.querySelector('[data-multistep-field=\"' + $event.detail.field + '\"]')?.focus())
+        }
+    "
+    class="max-w-xl mx-auto bg-white p-6 rounded shadow-md"
+    aria-labelledby="{{ $headingId }}"
+>
     <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
-            <span id="{{ $headingId }}" class="text-sm font-semibold text-gray-800" aria-live="polite">
+            <span
+                id="{{ $headingId }}"
+                x-ref="stepHeading"
+                tabindex="-1"
+                class="text-sm font-semibold text-gray-800 focus-visible:outline-2 focus-visible:outline-offset-2"
+                aria-live="polite"
+            >
                 {{ __('livewire-multistep-form::messages.step', ['current' => $step, 'total' => $totalSteps]) }}
             </span>
         </div>
@@ -60,6 +81,7 @@
                     @if ($config['type'] === 'textarea')
                         <textarea
                             id="{{ $inputId }}"
+                            data-multistep-field="{{ $field }}"
                             aria-invalid="{{ $hasError ? 'true' : 'false' }}"
                             @if ($hasError) aria-describedby="{{ $errorId }}" @endif
                             wire:model="formData.{{ $field }}"
@@ -70,6 +92,7 @@
                     @elseif ($config['type'] === 'select')
                         <select
                             id="{{ $inputId }}"
+                            data-multistep-field="{{ $field }}"
                             aria-invalid="{{ $hasError ? 'true' : 'false' }}"
                             @if ($hasError) aria-describedby="{{ $errorId }}" @endif
                             wire:model="formData.{{ $field }}"
@@ -87,6 +110,7 @@
                         <input
                             id="{{ $inputId }}"
                             type="{{ $config['type'] }}"
+                            data-multistep-field="{{ $field }}"
                             aria-invalid="{{ $hasError ? 'true' : 'false' }}"
                             @if ($hasError) aria-describedby="{{ $errorId }}" @endif
                             wire:model="formData.{{ $field }}"

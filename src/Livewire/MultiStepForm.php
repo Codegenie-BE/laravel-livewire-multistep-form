@@ -4,6 +4,7 @@ namespace Codegenie\LivewireMultistepForm\Livewire;
 
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -72,6 +73,7 @@ class MultiStepForm extends Component
         $this->validateCurrentStep();
         $this->step++;
         $this->resetValidation();
+        $this->dispatchFocusHeading();
     }
 
     public function previousStep(): void
@@ -82,11 +84,12 @@ class MultiStepForm extends Component
 
         $this->step--;
         $this->resetValidation();
+        $this->dispatchFocusHeading();
     }
 
     public function submit(): void
     {
-        $validated = $this->validate($this->allRules(), [], $this->attributeLabels());
+        $validated = $this->validateFields($this->fields);
 
         /** @var array<string, mixed> $data */
         $data = $validated['formData'] ?? [];
@@ -101,6 +104,7 @@ class MultiStepForm extends Component
         $this->step = 1;
         $this->resetFormData();
         $this->resetValidation();
+        $this->dispatchFocusHeading();
     }
 
     public function totalInputSteps(): int
@@ -190,9 +194,55 @@ class MultiStepForm extends Component
 
     protected function validateCurrentStep(): void
     {
-        $fields = $this->currentStepFields();
+        $this->validateFields($this->currentStepFields());
+    }
 
-        $this->validate($this->rulesForFields($fields), [], $this->attributeLabels());
+    /**
+     * @param  array<string, FieldConfig>  $fields
+     * @return array<string, mixed>
+     */
+    protected function validateFields(array $fields): array
+    {
+        try {
+            return $this->validate(
+                $this->rulesForFields($fields),
+                [],
+                $this->attributeLabels()
+            );
+        } catch (ValidationException $exception) {
+            $this->dispatchFocusForFirstError($exception);
+
+            throw $exception;
+        }
+    }
+
+    protected function dispatchFocusHeading(): void
+    {
+        $this->dispatch(
+            'multistep-focus-heading',
+            instanceId: $this->getId()
+        );
+    }
+
+    protected function dispatchFocusForFirstError(ValidationException $exception): void
+    {
+        $errorKey = array_key_first($exception->errors());
+
+        if (! is_string($errorKey) || ! str_starts_with($errorKey, 'formData.')) {
+            return;
+        }
+
+        $field = substr($errorKey, strlen('formData.'));
+
+        if (! array_key_exists($field, $this->fields)) {
+            return;
+        }
+
+        $this->dispatch(
+            'multistep-focus-field',
+            instanceId: $this->getId(),
+            field: $field
+        );
     }
 
     /**
