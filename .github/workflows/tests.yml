@@ -215,3 +215,20 @@ jobs:
 
             - name: Audit dependencies
               run: composer audit
+
+    required:
+        name: Required checks
+        if: always()
+        needs:
+            - compatibility
+            - minimum-compatibility
+            - quality
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+
+        steps:
+            - name: Verify required jobs
+              run: |
+                  test "${{ needs.compatibility.result }}" = "success"
+                  test "${{ needs.minimum-compatibility.result }}" = "success"
+                  test "${{ needs.quality.result }}" = "success"
