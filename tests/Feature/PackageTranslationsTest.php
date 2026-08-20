@@ -3,7 +3,7 @@
 function packageTranslations(string $locale): array
 {
     /** @var array<string, string> $translations */
-    $translations = require dirname(__DIR__, 2)."/../resources/lang/{$locale}/messages.php";
+    $translations = require dirname(__DIR__, 2)."/resources/lang/{$locale}/messages.php";
 
     return $translations;
 }
