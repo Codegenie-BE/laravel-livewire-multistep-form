@@ -47,8 +47,7 @@
     "scripts": {
         "test": "pest",
         "format": "pint --test src tests",
-        "analyse": "phpstan analyse --memory-limit=1G",
-        "audit": "composer audit"
+        "analyse": "phpstan analyse --memory-limit=1G"
     },
     "extra": {
         "laravel": {
