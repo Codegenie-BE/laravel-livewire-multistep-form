@@ -93,7 +93,7 @@ Each field supports these keys:
 | `rules` | conditionally | Laravel validation rules as a non-empty string or an array of non-empty strings; may be empty when `serverValidationRules()` supplies the field rules |
 | `step` | yes | Positive integer step number |
 | `label` | no | Human-readable label; generated from the field name when omitted |
-| `default` | no | Scalar or `null` initial value; defaults to an empty string |
+| `default` | no | Scalar or `null` initial value; defaults to an empty string. Select defaults are more restrictive as described below. |
 | `placeholder` | no | Non-empty placeholder text for text-like fields, textarea, or select |
 | `options` | for `select` | Non-empty value-to-label map; option values form the server-side allow-list |
 
@@ -103,7 +103,7 @@ Every field must have at least one configured validation rule or one server-only
 
 Select option keys are normalized to strings because browser and Livewire form values are string-based. The package adds the configured option keys to the same Laravel validator used for the rest of the field rules, so consumers do not need to duplicate the option list in an `in:` rule.
 
-A non-empty select default must exist in `options`. The empty value is reserved for the unselected / placeholder state. On the review step, the human-readable option label is displayed instead of the raw option key.
+Select defaults may only be strings, integers, or `null`; integer defaults are normalized to strings. Booleans and floating-point defaults are rejected to avoid ambiguous browser value coercion. A non-empty select default must exist in `options`. The empty value is reserved for the unselected / placeholder state. On the review step, the human-readable option label is displayed instead of the raw option key.
 
 ## Validation
 
