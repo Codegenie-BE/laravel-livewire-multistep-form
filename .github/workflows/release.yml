@@ -7,6 +7,7 @@ on:
             - main
         paths:
             - VERSION
+            - .github/workflows/release.yml
 
 permissions:
     contents: write
@@ -83,6 +84,13 @@ jobs:
                   PACKAGE_METADATA_URL: https://repo.packagist.org/p2/codegenie-be/laravel-livewire-multistep-form.json
               shell: bash
               run: |
+                  status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PACKAGE_METADATA_URL" || true)"
+
+                  if [[ "$status" != "200" ]]; then
+                      echo "::warning::The package is not on Packagist yet. Submit https://github.com/Codegenie-BE/laravel-livewire-multistep-form once on Packagist and enable GitHub auto-update. No Packagist API token is required in this repository."
+                      exit 0
+                  fi
+
                   for attempt in $(seq 1 30); do
                       if curl --fail --silent --show-error "$PACKAGE_METADATA_URL" \
                           | jq --exit-status \
@@ -97,7 +105,7 @@ jobs:
                       sleep 10
                   done
 
-                  echo "::error::Packagist did not expose $RELEASE_TAG at $RELEASE_COMMIT within five minutes. For the first publication, submit https://github.com/Codegenie-BE/laravel-livewire-multistep-form once on Packagist and enable its GitHub auto-update integration."
+                  echo "::error::Packagist knows this package but did not expose $RELEASE_TAG at $RELEASE_COMMIT within five minutes. Check the Packagist GitHub auto-update integration."
                   exit 1
 
             - name: Delete every non-main branch
