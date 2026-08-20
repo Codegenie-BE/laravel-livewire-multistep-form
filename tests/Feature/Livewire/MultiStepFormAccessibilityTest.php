@@ -1,6 +1,7 @@
 <?php
 
 use Codegenie\LivewireMultistepForm\Livewire\MultiStepForm;
+use Illuminate\Support\Facades\Blade;
 use Livewire\Livewire;
 
 function accessibilityFields(): array
@@ -54,4 +55,29 @@ test('package interface copy follows the application locale', function () {
         ->assertSee('Stap 1 van 2')
         ->assertSee('Formuliervoortgang')
         ->assertSee('Volgende');
+});
+
+test('multiple wizard instances render without duplicate DOM ids', function () {
+    $fields = accessibilityFields();
+
+    $html = Blade::render(<<<'BLADE'
+        <div>
+            <livewire:codegenie-multistep-form :fields="$fields" key="first-wizard" />
+            <livewire:codegenie-multistep-form :fields="$fields" key="second-wizard" />
+        </div>
+    BLADE, compact('fields'));
+
+    preg_match_all('/\sid="([^"]+)"/', $html, $matches);
+
+    $ids = $matches[1];
+    $fieldIds = array_values(array_filter(
+        $ids,
+        fn (string $id): bool => str_ends_with($id, '-field-name')
+    ));
+
+    expect($ids)
+        ->not->toBeEmpty()
+        ->and(array_values(array_unique($ids)))->toHaveCount(count($ids))
+        ->and($fieldIds)->toHaveCount(2)
+        ->and(array_values(array_unique($fieldIds)))->toHaveCount(2);
 });
