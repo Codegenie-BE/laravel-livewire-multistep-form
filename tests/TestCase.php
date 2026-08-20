@@ -2,9 +2,15 @@
 
 namespace Tests;
 
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Codegenie\LivewireMultistepForm\LivewireMultistepFormServiceProvider;
+use Orchestra\Testbench\TestCase as Orchestra;
 
-abstract class TestCase extends BaseTestCase
+abstract class TestCase extends Orchestra
 {
-    //
+    protected function getPackageProviders($app): array
+    {
+        return [
+            LivewireMultistepFormServiceProvider::class,
+        ];
+    }
 }
