@@ -15,4 +15,9 @@ abstract class TestCase extends Orchestra
             LivewireMultistepFormServiceProvider::class,
         ];
     }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('app.key', str_repeat('a', 32));
+    }
 }
