@@ -11,6 +11,7 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - Reusable Composer library structure with Laravel package discovery.
 - Dynamic consecutive multi-step navigation and review step.
 - Per-step and full-form server-side validation.
+- Server-only validation rule extension hook for Laravel rule objects, closures, and application-sensitive validation configuration.
 - Locked Livewire state for field configuration, current step, and visual color settings.
 - Server-side allow-list validation for configured select options.
 - Select placeholders, normalized option values, validated defaults, and human-readable review labels.
@@ -31,6 +32,7 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - Duplicate review labels overwriting values.
 - Explicit `null` defaults being converted to empty strings.
 - Select values being accepted when they were not part of the configured options.
+- Select allow-list validation running as a second validator instead of the main field validation pass.
 - Select review output showing internal option keys instead of labels.
 - Duplicate DOM IDs when multiple wizard instances are rendered on the same page.
 - Production package structure containing a full Laravel application skeleton and unused frontend build files.

@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Tests\Fixtures\RecordingMultiStepForm;
+use Tests\Fixtures\ServerValidationMultiStepForm;
 
 function configurationField(array $overrides = []): array
 {
@@ -48,15 +49,52 @@ test('step must be a positive integer', function () {
         ->toThrow(InvalidArgumentException::class, 'positive integer step');
 });
 
-test('validation rules must be non empty strings', function () {
+test('configured validation rules must contain non empty strings', function () {
     expect(fn () => (new MultiStepForm)->mount(configurationField(['rules' => ''])))
-        ->toThrow(InvalidArgumentException::class, 'validation rules');
-
-    expect(fn () => (new MultiStepForm)->mount(configurationField(['rules' => []])))
         ->toThrow(InvalidArgumentException::class, 'validation rules');
 
     expect(fn () => (new MultiStepForm)->mount(configurationField(['rules' => ['required', '']])))
         ->toThrow(InvalidArgumentException::class, 'validation rules');
+});
+
+test('every field requires configured or server validation rules', function () {
+    expect(fn () => (new MultiStepForm)->mount(configurationField(['rules' => []])))
+        ->toThrow(InvalidArgumentException::class, 'configured rules or server validation rules');
+});
+
+test('server validation rules support Laravel rule objects without entering public field state', function () {
+    $fields = [
+        'email' => [
+            'default' => '',
+            'rules' => [],
+            'label' => 'Email',
+            'step' => 1,
+            'type' => 'email',
+        ],
+    ];
+
+    Livewire::test(ServerValidationMultiStepForm::class, ['fields' => $fields])
+        ->assertSet('fields.email.rules', [])
+        ->set('formData.email', 'blocked@example.com')
+        ->call('nextStep')
+        ->assertHasErrors(['formData.email' => 'in'])
+        ->assertSet('step', 1)
+        ->set('formData.email', 'allowed@example.com')
+        ->call('nextStep')
+        ->assertSet('step', 2);
+});
+
+test('server validation rules may only target configured fields', function () {
+    $component = new class extends MultiStepForm
+    {
+        protected function serverValidationRules(): array
+        {
+            return ['missing' => 'required'];
+        }
+    };
+
+    expect(fn () => $component->mount(configurationField()))
+        ->toThrow(InvalidArgumentException::class, 'unknown field [missing]');
 });
 
 test('labels must be non empty strings', function () {
