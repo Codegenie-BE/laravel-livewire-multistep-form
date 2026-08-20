@@ -14,4 +14,3 @@ Thumbs.db
 auth.json
 .env
 .env.*
-!.env.example
