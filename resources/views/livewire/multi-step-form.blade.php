@@ -12,12 +12,12 @@
     wire:submit="submit"
     x-data="{ componentId: @js($this->getId()) }"
     x-on:multistep-focus-heading.window="
-        if ($event.detail.component === componentId) {
+        if ($event.detail.instanceId === componentId) {
             $nextTick(() => $refs.stepHeading?.focus())
         }
     "
     x-on:multistep-focus-field.window="
-        if ($event.detail.component === componentId && typeof $event.detail.field === 'string') {
+        if ($event.detail.instanceId === componentId && typeof $event.detail.field === 'string') {
             $nextTick(() => $el.querySelector('[data-multistep-field=\"' + $event.detail.field + '\"]')?.focus())
         }
     "
