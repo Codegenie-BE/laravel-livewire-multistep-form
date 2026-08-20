@@ -1,45 +1,56 @@
 <?php
 
+use Codegenie\LivewireMultistepForm\Livewire\MultiStepForm;
 use Livewire\Livewire;
-use App\Livewire\MultiStepForm;
 
-test('user can complete all steps and submit the form', function () {
-    Livewire::test(MultiStepForm::class)
-        ->set('name', 'Jordy')
+function packageFields(): array
+{
+    return [
+        'name' => [
+            'default' => '',
+            'rules' => 'required|min:2',
+            'label' => 'Name',
+            'step' => 1,
+            'type' => 'text',
+        ],
+        'email' => [
+            'default' => '',
+            'rules' => 'required|email',
+            'label' => 'Email',
+            'step' => 2,
+            'type' => 'email',
+        ],
+        'message' => [
+            'default' => '',
+            'rules' => 'required|min:10',
+            'label' => 'Message',
+            'step' => 3,
+            'type' => 'textarea',
+        ],
+    ];
+}
+
+test('the package component completes the basic wizard flow', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => packageFields()])
+        ->set('formData.name', 'Jordy')
         ->call('nextStep')
         ->assertSet('step', 2)
-        ->set('email', 'jordy@example.com')
+        ->set('formData.email', 'jordy@example.com')
         ->call('nextStep')
         ->assertSet('step', 3)
-        ->set('message', 'This is a test message.')
+        ->set('formData.message', 'This is a test message.')
+        ->call('nextStep')
+        ->assertSet('step', 4)
         ->call('submit')
-        ->assertSessionHas('success')
+        ->assertDispatched('multistep-form-submitted')
+        ->assertSet('step', 1)
+        ->assertSet('formData', []);
+});
+
+test('the current step is validated before advancing', function () {
+    Livewire::test(MultiStepForm::class, ['fields' => packageFields()])
+        ->set('formData.name', '')
+        ->call('nextStep')
+        ->assertHasErrors(['name' => 'required'])
         ->assertSet('step', 1);
-});
-
-test('name is required on step 1', function () {
-    Livewire::test(MultiStepForm::class)
-        ->set('name', '')
-        ->call('nextStep')
-        ->assertHasErrors(['name' => 'required']);
-});
-
-test('email must be valid on step 2', function () {
-    Livewire::test(MultiStepForm::class)
-        ->set('name', 'Jordy')
-        ->call('nextStep')
-        ->set('email', 'invalid-email')
-        ->call('nextStep')
-        ->assertHasErrors(['email' => 'email']);
-});
-
-test('message is required on step 3', function () {
-    Livewire::test(MultiStepForm::class)
-        ->set('name', 'Jordy')
-        ->call('nextStep')
-        ->set('email', 'jordy@example.com')
-        ->call('nextStep')
-        ->set('message', '')
-        ->call('submit')
-        ->assertHasErrors(['message' => 'required']);
 });
