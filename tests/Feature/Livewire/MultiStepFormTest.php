@@ -133,7 +133,7 @@ test('sparse step numbers are rejected', function () {
             'step' => 3,
             'type' => 'text',
         ],
-    ]))->toThrow(\InvalidArgumentException::class, 'Form steps must be consecutive');
+    ]))->toThrow(InvalidArgumentException::class, 'Form steps must be consecutive');
 });
 
 test('unsupported field types are rejected', function () {
@@ -145,7 +145,7 @@ test('unsupported field types are rejected', function () {
             'step' => 1,
             'type' => 'file',
         ],
-    ]))->toThrow(\InvalidArgumentException::class, 'unsupported type');
+    ]))->toThrow(InvalidArgumentException::class, 'unsupported type');
 });
 
 test('unsafe color values are rejected', function () {
@@ -158,7 +158,7 @@ test('unsafe color values are rejected', function () {
             'type' => 'text',
         ],
     ], 'red; background:url(javascript:alert(1))'))
-        ->toThrow(\InvalidArgumentException::class, 'six-digit hexadecimal color');
+        ->toThrow(InvalidArgumentException::class, 'six-digit hexadecimal color');
 });
 
 test('review preserves fields that share the same label', function () {
