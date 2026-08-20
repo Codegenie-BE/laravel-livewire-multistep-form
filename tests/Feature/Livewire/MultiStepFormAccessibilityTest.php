@@ -19,7 +19,7 @@ function accessibilityFields(): array
 test('the wizard renders semantic form and progress markup', function () {
     Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
         ->assertSeeHtml('<form')
-        ->assertSeeHtml('wire:submit="submit"')
+        ->assertSeeHtml('wire:submit="nextStep"')
         ->assertSeeHtml('role="progressbar"')
         ->assertSeeHtml('aria-valuemin="1"')
         ->assertSeeHtml('aria-valuemax="2"')
@@ -73,6 +73,7 @@ test('the review step uses definition list semantics and a submit button', funct
     Livewire::test(MultiStepForm::class, ['fields' => accessibilityFields()])
         ->set('formData.name', 'Jordy')
         ->call('nextStep')
+        ->assertSeeHtml('wire:submit="submit"')
         ->assertSeeHtml('<dl')
         ->assertSeeHtml('<dt')
         ->assertSeeHtml('<dd')

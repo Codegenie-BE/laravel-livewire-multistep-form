@@ -138,14 +138,11 @@ test('a four-step form advances to step five for review', function () {
         ->assertSee('Review your information');
 });
 
-test('submit validates all fields even when called directly', function () {
+test('submit is ignored until the review step is reached', function () {
     Livewire::test(MultiStepForm::class, ['fields' => packageFields()])
         ->call('submit')
-        ->assertHasErrors([
-            'formData.name' => 'required',
-            'formData.email' => 'required',
-            'formData.message' => 'required',
-        ])
+        ->assertSet('step', 1)
+        ->assertHasNoErrors()
         ->assertNotDispatched('multistep-form-submitted');
 });
 
