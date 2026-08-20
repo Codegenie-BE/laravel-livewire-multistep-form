@@ -476,6 +476,10 @@ class MultiStepForm extends Component
             return $default;
         }
 
+        if (! is_string($default) && ! is_int($default)) {
+            throw new InvalidArgumentException("Select field [{$field}] must use a string, integer or null default value.");
+        }
+
         $value = (string) $default;
 
         if (! array_key_exists($value, $options)) {
