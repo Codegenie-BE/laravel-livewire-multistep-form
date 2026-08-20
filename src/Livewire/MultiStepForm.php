@@ -3,6 +3,8 @@
 namespace Codegenie\LivewireMultistepForm\Livewire;
 
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -14,7 +16,8 @@ use Livewire\Component;
  *     label: string,
  *     step: int,
  *     type: string,
- *     options: array<array-key, string>
+ *     placeholder: string|null,
+ *     options: array<string, string>
  * }
  */
 class MultiStepForm extends Component
@@ -84,6 +87,7 @@ class MultiStepForm extends Component
     public function submit(): void
     {
         $validated = $this->validate($this->allRules(), [], $this->attributeLabels());
+        $this->validateSelectValues($this->fields);
 
         /** @var array<string, mixed> $data */
         $data = $validated['formData'] ?? [];
@@ -139,7 +143,7 @@ class MultiStepForm extends Component
             ->map(fn (array $config, string $field): array => [
                 'name' => $field,
                 'label' => $config['label'],
-                'value' => $this->formData[$field] ?? '',
+                'value' => $this->reviewValue($field, $config),
             ])
             ->values()
             ->all();
@@ -169,15 +173,19 @@ class MultiStepForm extends Component
 
     protected function validateCurrentStep(): void
     {
-        $this->validate($this->rulesForCurrentStep(), [], $this->attributeLabels());
+        $fields = $this->currentStepFields();
+
+        $this->validate($this->rulesForFields($fields), [], $this->attributeLabels());
+        $this->validateSelectValues($fields);
     }
 
     /**
+     * @param  array<string, FieldConfig>  $fields
      * @return array<string, string|array<array-key, string>>
      */
-    protected function rulesForCurrentStep(): array
+    protected function rulesForFields(array $fields): array
     {
-        return collect($this->currentStepFields())
+        return collect($fields)
             ->mapWithKeys(fn (array $config, string $field): array => [
                 "formData.{$field}" => $config['rules'],
             ])
@@ -189,11 +197,7 @@ class MultiStepForm extends Component
      */
     protected function allRules(): array
     {
-        return collect($this->fields)
-            ->mapWithKeys(fn (array $config, string $field): array => [
-                "formData.{$field}" => $config['rules'],
-            ])
-            ->all();
+        return $this->rulesForFields($this->fields);
     }
 
     /**
@@ -294,12 +298,17 @@ class MultiStepForm extends Component
             throw new InvalidArgumentException("Field [{$field}] must have a scalar or null default value.");
         }
 
-        $options = $config['options'] ?? [];
+        $placeholder = $config['placeholder'] ?? null;
+
+        if ($placeholder !== null && (! is_string($placeholder) || trim($placeholder) === '')) {
+            throw new InvalidArgumentException("Field [{$field}] must have a non-empty placeholder when one is provided.");
+        }
+
         $normalizedOptions = [];
 
         if ($type === 'select') {
-            $this->validateOptions($field, $options);
-            $normalizedOptions = $options;
+            $normalizedOptions = $this->normalizeOptions($field, $config['options'] ?? []);
+            $default = $this->normalizeSelectDefault($field, $default, $normalizedOptions);
         }
 
         return [
@@ -308,6 +317,7 @@ class MultiStepForm extends Component
             'label' => trim($label),
             'step' => $step,
             'type' => $type,
+            'placeholder' => $placeholder === null ? null : trim($placeholder),
             'options' => $normalizedOptions,
         ];
     }
@@ -335,19 +345,87 @@ class MultiStepForm extends Component
     }
 
     /**
-     * @phpstan-assert array<array-key, string> $options
+     * @return array<string, string>
      */
-    protected function validateOptions(string $field, mixed $options): void
+    protected function normalizeOptions(string $field, mixed $options): array
     {
         if (! is_array($options) || $options === []) {
             throw new InvalidArgumentException("Select field [{$field}] must define at least one option.");
         }
 
-        foreach ($options as $label) {
+        $normalized = [];
+
+        foreach ($options as $value => $label) {
+            $value = (string) $value;
+
+            if ($value === '') {
+                throw new InvalidArgumentException("Select field [{$field}] may not use an empty option value because it is reserved for the placeholder.");
+            }
+
             if (! is_string($label) || trim($label) === '') {
                 throw new InvalidArgumentException("Select field [{$field}] contains an invalid option label.");
             }
+
+            $normalized[$value] = trim($label);
         }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array<string, string>  $options
+     */
+    protected function normalizeSelectDefault(string $field, mixed $default, array $options): ?string
+    {
+        if ($default === null || $default === '') {
+            return $default;
+        }
+
+        $value = (string) $default;
+
+        if (! array_key_exists($value, $options)) {
+            throw new InvalidArgumentException("Select field [{$field}] has a default value that is not present in its options.");
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param  array<string, FieldConfig>  $fields
+     */
+    protected function validateSelectValues(array $fields): void
+    {
+        $rules = collect($fields)
+            ->filter(fn (array $config): bool => $config['type'] === 'select')
+            ->mapWithKeys(fn (array $config, string $field): array => [
+                "formData.{$field}" => ['nullable', Rule::in(array_keys($config['options']))],
+            ])
+            ->all();
+
+        if ($rules === []) {
+            return;
+        }
+
+        Validator::make(
+            ['formData' => $this->formData],
+            $rules,
+            [],
+            $this->attributeLabels()
+        )->validate();
+    }
+
+    /**
+     * @param  FieldConfig  $config
+     */
+    protected function reviewValue(string $field, array $config): mixed
+    {
+        $value = $this->formData[$field] ?? null;
+
+        if ($config['type'] === 'select' && $value !== null && $value !== '') {
+            return $config['options'][(string) $value] ?? $value;
+        }
+
+        return $value ?? '';
     }
 
     protected function validateColor(string $color, string $name): string

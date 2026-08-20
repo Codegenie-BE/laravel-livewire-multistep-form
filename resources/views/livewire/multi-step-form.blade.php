@@ -61,6 +61,7 @@
                             @if ($hasError) aria-describedby="{{ $errorId }}" @endif
                             wire:model="formData.{{ $field }}"
                             class="{{ $finalClass }} h-32"
+                            @if ($config['placeholder'] !== null) placeholder="{{ $config['placeholder'] }}" @endif
                             @if ($isRequired) required @endif
                         ></textarea>
                     @elseif ($config['type'] === 'select')
@@ -72,6 +73,9 @@
                             class="{{ $finalClass }}"
                             @if ($isRequired) required @endif
                         >
+                            @if ($config['placeholder'] !== null || $config['default'] === '' || $config['default'] === null)
+                                <option value="">{{ $config['placeholder'] ?? 'Select an option' }}</option>
+                            @endif
                             @foreach ($config['options'] as $optionValue => $optionLabel)
                                 <option value="{{ $optionValue }}">{{ $optionLabel }}</option>
                             @endforeach
@@ -84,6 +88,7 @@
                             @if ($hasError) aria-describedby="{{ $errorId }}" @endif
                             wire:model="formData.{{ $field }}"
                             class="{{ $finalClass }}"
+                            @if ($config['placeholder'] !== null) placeholder="{{ $config['placeholder'] }}" @endif
                             @if ($isRequired) required @endif
                         >
                     @endif
