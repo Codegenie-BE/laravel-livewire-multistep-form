@@ -117,7 +117,10 @@ jobs:
               run: composer test
 
             - name: Check formatting
-              run: composer format
+              run: |
+                  vendor/bin/pint src tests
+                  git diff -- src tests
+                  git diff --exit-code -- src tests
 
             - name: Run static analysis
               run: composer analyse
