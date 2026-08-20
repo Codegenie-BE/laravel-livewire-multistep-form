@@ -7,6 +7,16 @@ use InvalidArgumentException;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
+/**
+ * @phpstan-type FieldConfig array{
+ *     default: bool|float|int|string|null,
+ *     rules: string|array<array-key, string>,
+ *     label: string,
+ *     step: int,
+ *     type: string,
+ *     options: array<array-key, string>
+ * }
+ */
 class MultiStepForm extends Component
 {
     private const SUPPORTED_FIELD_TYPES = [
@@ -23,6 +33,7 @@ class MultiStepForm extends Component
     #[Locked]
     public int $step = 1;
 
+    /** @var array<string, mixed> */
     public array $formData = [];
 
     #[Locked]
@@ -31,9 +42,13 @@ class MultiStepForm extends Component
     #[Locked]
     public string $buttonColor = '#2563eb';
 
+    /** @var array<string, FieldConfig> */
     #[Locked]
     public array $fields = [];
 
+    /**
+     * @param array<array-key, mixed> $fields
+     */
     public function mount(
         array $fields = [],
         string $primaryColor = '#2563eb',
@@ -69,6 +84,8 @@ class MultiStepForm extends Component
     public function submit(): void
     {
         $validated = $this->validate($this->allRules(), [], $this->attributeLabels());
+
+        /** @var array<string, mixed> $data */
         $data = $validated['formData'] ?? [];
 
         $this->handleSubmission($data);
@@ -103,6 +120,9 @@ class MultiStepForm extends Component
         return $this->step === $this->reviewStep();
     }
 
+    /**
+     * @return array<string, FieldConfig>
+     */
     public function currentStepFields(): array
     {
         return collect($this->fields)
@@ -110,6 +130,9 @@ class MultiStepForm extends Component
             ->all();
     }
 
+    /**
+     * @return list<array{name: string, label: string, value: mixed}>
+     */
     public function reviewItems(): array
     {
         return collect($this->fields)
@@ -122,6 +145,9 @@ class MultiStepForm extends Component
             ->all();
     }
 
+    /**
+     * @param FieldConfig $config
+     */
     public function isFieldRequired(array $config): bool
     {
         $rules = $config['rules'];
@@ -133,6 +159,9 @@ class MultiStepForm extends Component
         return in_array('required', $rules, true);
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     protected function handleSubmission(array $data): void
     {
         // Extension point for consumers that subclass the component.
@@ -143,6 +172,9 @@ class MultiStepForm extends Component
         $this->validate($this->rulesForCurrentStep(), [], $this->attributeLabels());
     }
 
+    /**
+     * @return array<string, string|array<array-key, string>>
+     */
     protected function rulesForCurrentStep(): array
     {
         return collect($this->currentStepFields())
@@ -152,6 +184,9 @@ class MultiStepForm extends Component
             ->all();
     }
 
+    /**
+     * @return array<string, string|array<array-key, string>>
+     */
     protected function allRules(): array
     {
         return collect($this->fields)
@@ -161,6 +196,9 @@ class MultiStepForm extends Component
             ->all();
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected function attributeLabels(): array
     {
         return collect($this->fields)
@@ -179,12 +217,17 @@ class MultiStepForm extends Component
             ->all();
     }
 
+    /**
+     * @param array<array-key, mixed> $fields
+     * @return array<string, FieldConfig>
+     */
     protected function validateAndNormalizeFields(array $fields): array
     {
         if ($fields === []) {
             throw new InvalidArgumentException('At least one field must be defined for the multi-step form.');
         }
 
+        /** @var array<string, FieldConfig> $normalized */
         $normalized = [];
 
         foreach ($fields as $field => $config) {
@@ -215,6 +258,10 @@ class MultiStepForm extends Component
         return $normalized;
     }
 
+    /**
+     * @param array<array-key, mixed> $config
+     * @return FieldConfig
+     */
     protected function normalizeField(string $field, array $config): array
     {
         $step = $config['step'] ?? null;
@@ -243,14 +290,16 @@ class MultiStepForm extends Component
 
         $default = $config['default'] ?? '';
 
-        if (! is_scalar($default) && $default !== null) {
+        if ($default !== null && ! is_scalar($default)) {
             throw new InvalidArgumentException("Field [{$field}] must have a scalar or null default value.");
         }
 
         $options = $config['options'] ?? [];
+        $normalizedOptions = [];
 
         if ($type === 'select') {
             $this->validateOptions($field, $options);
+            $normalizedOptions = $options;
         }
 
         return [
@@ -259,10 +308,13 @@ class MultiStepForm extends Component
             'label' => trim($label),
             'step' => $step,
             'type' => $type,
-            'options' => $type === 'select' ? $options : [],
+            'options' => $normalizedOptions,
         ];
     }
 
+    /**
+     * @phpstan-assert-if-true string|array<array-key, string> $rules
+     */
     protected function hasValidRules(mixed $rules): bool
     {
         if (is_string($rules)) {
@@ -282,6 +334,9 @@ class MultiStepForm extends Component
         return true;
     }
 
+    /**
+     * @phpstan-assert array<array-key, string> $options
+     */
     protected function validateOptions(string $field, mixed $options): void
     {
         if (! is_array($options) || $options === []) {
@@ -306,6 +361,9 @@ class MultiStepForm extends Component
 
     public function render(): View
     {
-        return view('livewire-multistep-form::livewire.multi-step-form');
+        /** @var view-string $view */
+        $view = 'livewire-multistep-form::livewire.multi-step-form';
+
+        return view($view);
     }
 }
