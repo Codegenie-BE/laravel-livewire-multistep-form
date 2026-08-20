@@ -5,6 +5,7 @@ use Codegenie\LivewireMultistepForm\LivewireMultistepFormServiceProvider;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
+use Tests\Fixtures\RecordingMultiStepForm;
 
 function configurationField(array $overrides = []): array
 {
@@ -17,20 +18,6 @@ function configurationField(array $overrides = []): array
             'type' => 'text',
         ], $overrides),
     ];
-}
-
-class RecordingMultiStepForm extends MultiStepForm
-{
-    public int $handledCount = 0;
-
-    /** @var array<string, mixed> */
-    public array $handledData = [];
-
-    protected function handleSubmission(array $data): void
-    {
-        $this->handledCount++;
-        $this->handledData = $data;
-    }
 }
 
 test('an empty field configuration is rejected', function () {

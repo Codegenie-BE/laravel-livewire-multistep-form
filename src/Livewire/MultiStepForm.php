@@ -139,14 +139,17 @@ class MultiStepForm extends Component
      */
     public function reviewItems(): array
     {
-        return collect($this->fields)
-            ->map(fn (array $config, string $field): array => [
+        $items = [];
+
+        foreach ($this->fields as $field => $config) {
+            $items[] = [
                 'name' => $field,
                 'label' => $config['label'],
                 'value' => $this->reviewValue($field, $config),
-            ])
-            ->values()
-            ->all();
+            ];
+        }
+
+        return $items;
     }
 
     /**
@@ -246,12 +249,14 @@ class MultiStepForm extends Component
             $normalized[$field] = $this->normalizeField($field, $config);
         }
 
-        $steps = collect($normalized)
-            ->pluck('step')
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        $steps = [];
+
+        foreach ($normalized as $config) {
+            $steps[] = $config['step'];
+        }
+
+        $steps = array_values(array_unique($steps));
+        sort($steps);
 
         $expectedSteps = range(1, max($steps));
 
