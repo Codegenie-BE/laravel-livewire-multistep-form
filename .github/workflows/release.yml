@@ -1,11 +1,13 @@
 name: Release
 
 on:
+    workflow_dispatch:
     push:
         branches:
             - main
         paths:
             - VERSION
+            - .github/workflows/release.yml
 
 permissions:
     contents: write
@@ -42,14 +44,16 @@ jobs:
                   echo "version=$version" >> "$GITHUB_OUTPUT"
                   echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
-            - name: Create version tag
+            - name: Ensure version tag exists
               env:
                   TAG: ${{ steps.metadata.outputs.tag }}
               shell: bash
               run: |
+                  git fetch --tags --force
+
                   if git rev-parse "$TAG" >/dev/null 2>&1; then
-                      echo "::error::Tag $TAG already exists"
-                      exit 1
+                      echo "Tag $TAG already exists; keeping the existing release target."
+                      exit 0
                   fi
 
                   git config user.name "github-actions[bot]"
@@ -105,15 +109,20 @@ jobs:
 
                   echo "operation=created" >> "$GITHUB_OUTPUT"
 
-            - name: Create GitHub release
+            - name: Ensure GitHub release exists
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ steps.metadata.outputs.tag }}
               shell: bash
               run: |
+                  if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      echo "GitHub release $TAG already exists."
+                      exit 0
+                  fi
+
                   gh release create "$TAG" \
                       --repo "$GITHUB_REPOSITORY" \
-                      --target "$GITHUB_SHA" \
+                      --target "$TAG" \
                       --title "$TAG" \
                       --generate-notes
 
@@ -121,7 +130,7 @@ jobs:
               if: steps.packagist.outcome != 'success'
               shell: bash
               run: |
-                  echo "::warning::GitHub release was created, but Packagist could not be created/updated automatically. Configure PACKAGIST_MAIN_TOKEN for first publication or a SAFE/MAIN token for updates."
+                  echo "::warning::Packagist could not be created/updated automatically. Configure PACKAGIST_MAIN_TOKEN for first publication or a SAFE/MAIN token for updates, then run this workflow manually."
 
             - name: Delete every non-main branch
               if: always()
