@@ -220,7 +220,7 @@ class MultiStepForm extends Component
     {
         $this->dispatch(
             'multistep-focus-heading',
-            component: $this->getId()
+            instanceId: $this->getId()
         );
     }
 
@@ -240,7 +240,7 @@ class MultiStepForm extends Component
 
         $this->dispatch(
             'multistep-focus-field',
-            component: $this->getId(),
+            instanceId: $this->getId(),
             field: $field
         );
     }
