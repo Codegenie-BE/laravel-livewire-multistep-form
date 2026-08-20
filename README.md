@@ -90,26 +90,57 @@ Each field supports these keys:
 | Key | Required | Description |
 | --- | --- | --- |
 | `type` | yes | One of `text`, `email`, `number`, `tel`, `url`, `date`, `textarea`, or `select` |
-| `rules` | yes | Laravel validation rules as a non-empty string or an array of non-empty strings |
+| `rules` | conditionally | Laravel validation rules as a non-empty string or an array of non-empty strings; may be empty when `serverValidationRules()` supplies the field rules |
 | `step` | yes | Positive integer step number |
 | `label` | no | Human-readable label; generated from the field name when omitted |
 | `default` | no | Scalar or `null` initial value; defaults to an empty string |
 | `placeholder` | no | Non-empty placeholder text for text-like fields, textarea, or select |
 | `options` | for `select` | Non-empty value-to-label map; option values form the server-side allow-list |
 
-Unsupported field types are rejected instead of being rendered with undefined behavior. File uploads, checkboxes, radio groups, repeaters, and nested field names are intentionally outside the current scope.
+Every field must have at least one configured validation rule or one server-only validation rule. Unsupported field types are rejected instead of being rendered with undefined behavior. File uploads, checkboxes, radio groups, repeaters, and nested field names are intentionally outside the current scope.
 
 ### Select fields
 
-Select option keys are normalized to strings because browser and Livewire form values are string-based. The package validates submitted select values against the configured option keys on the server, so consumers do not need to duplicate the option list in an `in:` rule.
+Select option keys are normalized to strings because browser and Livewire form values are string-based. The package adds the configured option keys to the same Laravel validator used for the rest of the field rules, so consumers do not need to duplicate the option list in an `in:` rule.
 
 A non-empty select default must exist in `options`. The empty value is reserved for the unselected / placeholder state. On the review step, the human-readable option label is displayed instead of the raw option key.
 
 ## Validation
 
-`nextStep()` validates only the fields on the current step. `submit()` validates the complete form again, so directly invoking the submission action cannot bypass previous steps.
+`nextStep()` validates only the fields on the current step. `submit()` validates the complete form again, so directly invoking the submission action cannot bypass previous steps. Select values are constrained to their configured option keys as part of that same validation pass.
 
-Select values receive an additional server-side allow-list check against their configured options. Validation errors use the same `formData.*` keys as the Livewire bindings and are rendered with accessible error relationships.
+### Server-only Laravel rules
+
+The declarative `rules` value is part of the locked public Livewire field configuration. It is appropriate for ordinary serializable rules such as `required|string|max:255`, but rule configuration that contains application internals or Laravel rule objects should remain on the server.
+
+Extend the component and override `serverValidationRules()` for those rules. Keys are the configured field names without the `formData.` prefix:
+
+```php
+<?php
+
+namespace App\Livewire;
+
+use Codegenie\LivewireMultistepForm\Livewire\MultiStepForm;
+use Illuminate\Validation\Rule;
+
+class ContactWizard extends MultiStepForm
+{
+    protected function serverValidationRules(): array
+    {
+        return [
+            'email' => [
+                Rule::unique('users', 'email'),
+            ],
+        ];
+    }
+}
+```
+
+The returned rules are rebuilt on each Livewire request and merged with the declarative field rules. Laravel rule objects and closures can therefore be used without placing them in public Livewire state. A server-only rule may only target a configured field; unknown field names are rejected instead of silently validating unrelated data.
+
+A field may also leave `rules` empty and define its complete validation contract in `serverValidationRules()`. If native browser `required` semantics are desired, keep a simple `required` rule in the declarative field configuration as well; the server remains authoritative either way.
+
+Validation errors use the same `formData.*` keys as the Livewire bindings and are rendered with accessible error relationships.
 
 ## Handling submissions
 
@@ -117,11 +148,10 @@ The base package deliberately does **not** write to a database, send mail, or re
 
 On a valid submission it:
 
-1. validates the complete form;
-2. validates configured select values against their option allow-lists;
-3. calls the protected `handleSubmission(array $data)` extension point;
-4. dispatches the `multistep-form-submitted` Livewire event with the validated configured data;
-5. resets the wizard to its configured defaults.
+1. validates the complete form, including configured select allow-lists and server-only rules;
+2. calls the protected `handleSubmission(array $data)` extension point;
+3. dispatches the `multistep-form-submitted` Livewire event with the validated configured data;
+4. resets the wizard to its configured defaults.
 
 For server-side persistence, extend the component in your application:
 
@@ -210,6 +240,8 @@ The package validates the color format. The consuming application remains respon
 ## Security characteristics
 
 - Field configuration, current step, and color configuration are locked Livewire state.
+- Declarative field rules are public Livewire state and should not contain sensitive application internals.
+- `serverValidationRules()` keeps complex or sensitive rule configuration server-side.
 - User-controlled form values remain mutable and are always validated server-side.
 - Submission validates the complete form again.
 - Select values are checked against their configured server-side option allow-lists.
