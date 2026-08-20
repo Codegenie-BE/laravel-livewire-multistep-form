@@ -288,7 +288,7 @@ class MultiStepForm extends Component
             throw new InvalidArgumentException("Field [{$field}] must have a non-empty label.");
         }
 
-        $default = $config['default'] ?? '';
+        $default = array_key_exists('default', $config) ? $config['default'] : '';
 
         if ($default !== null && ! is_scalar($default)) {
             throw new InvalidArgumentException("Field [{$field}] must have a scalar or null default value.");
