@@ -10,25 +10,117 @@ permissions:
     contents: read
 
 jobs:
-    tests:
+    compatibility:
+        name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel-name }} / Livewire ${{ matrix.livewire-name }}
         runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - php: '8.2'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^3.6'
+                      livewire-name: '3'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
+                    - php: '8.2'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
+                    - php: '8.5'
+                      laravel: '^12.0'
+                      laravel-name: '12'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^10.0'
+                      pest: '^3.8'
+                      pest-plugin: '^3.2'
+                    - php: '8.3'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^3.6'
+                      livewire-name: '3'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
+                    - php: '8.3'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
+                    - php: '8.5'
+                      laravel: '^13.0'
+                      laravel-name: '13'
+                      livewire: '^4.0'
+                      livewire-name: '4'
+                      testbench: '^11.0'
+                      pest: '^4.0'
+                      pest-plugin: '^4.0'
 
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
 
             - name: Setup PHP
               uses: shivammathur/setup-php@v2
               with:
-                  php-version: '8.3'
+                  php-version: ${{ matrix.php }}
                   coverage: none
                   tools: composer:v2
 
-            - name: Install dependencies
-              run: composer install --no-interaction --no-progress --prefer-dist
+            - name: Resolve compatibility set
+              run: >-
+                  composer update
+                  --with="laravel/framework:${{ matrix.laravel }}"
+                  --with="livewire/livewire:${{ matrix.livewire }}"
+                  --with="orchestra/testbench:${{ matrix.testbench }}"
+                  --with="pestphp/pest:${{ matrix.pest }}"
+                  --with="pestphp/pest-plugin-laravel:${{ matrix.pest-plugin }}"
+                  --prefer-dist
+                  --no-interaction
+                  --no-progress
+
+            - name: Run tests
+              run: composer test
+
+    quality:
+        name: Quality gates
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Validate Composer metadata
+              run: composer validate --strict
+
+            - name: Install latest supported dependencies
+              run: composer update --prefer-dist --no-interaction --no-progress
 
             - name: Run tests
               run: composer test
 
             - name: Check formatting
               run: composer format
+
+            - name: Run static analysis
+              run: composer analyse
+
+            - name: Audit dependencies
+              run: composer audit
