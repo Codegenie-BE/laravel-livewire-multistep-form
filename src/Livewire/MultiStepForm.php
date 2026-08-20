@@ -104,6 +104,7 @@ class MultiStepForm extends Component
         $this->step = 1;
         $this->resetFormData();
         $this->resetValidation();
+        $this->dispatchFocusHeading();
     }
 
     public function totalInputSteps(): int
