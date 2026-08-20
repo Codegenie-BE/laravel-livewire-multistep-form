@@ -3,24 +3,27 @@
     $totalSteps = $this->totalSteps();
     $isReviewStep = $this->isReviewStep();
     $progress = (int) round(($step / $totalSteps) * 100);
+    $idPrefix = 'multistep-' . $this->getId();
+    $headingId = $idPrefix . '-heading';
+    $reviewHeadingId = $idPrefix . '-review-heading';
 @endphp
 
-<form wire:submit="submit" class="max-w-xl mx-auto bg-white p-6 rounded shadow-md" aria-labelledby="multistep-form-heading">
+<form wire:submit="submit" class="max-w-xl mx-auto bg-white p-6 rounded shadow-md" aria-labelledby="{{ $headingId }}">
     <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
-            <span id="multistep-form-heading" class="text-sm font-semibold text-gray-800" aria-live="polite">
-                Step {{ $step }} of {{ $totalSteps }}
+            <span id="{{ $headingId }}" class="text-sm font-semibold text-gray-800" aria-live="polite">
+                {{ __('livewire-multistep-form::messages.step', ['current' => $step, 'total' => $totalSteps]) }}
             </span>
         </div>
 
         <div
             class="w-full bg-gray-200 rounded-full h-3 overflow-hidden"
             role="progressbar"
-            aria-label="Form progress"
+            aria-label="{{ __('livewire-multistep-form::messages.progress_label') }}"
             aria-valuemin="1"
             aria-valuemax="{{ $totalSteps }}"
             aria-valuenow="{{ $step }}"
-            aria-valuetext="Step {{ $step }} of {{ $totalSteps }}, {{ $progress }} percent complete"
+            aria-valuetext="{{ __('livewire-multistep-form::messages.progress_value', ['current' => $step, 'total' => $totalSteps, 'percent' => $progress]) }}"
         >
             <div
                 class="h-full rounded-full transition-all duration-300 motion-reduce:transition-none"
@@ -32,12 +35,12 @@
 
     @if (! $isReviewStep)
         <fieldset>
-            <legend class="sr-only">Fields for step {{ $step }}</legend>
+            <legend class="sr-only">{{ __('livewire-multistep-form::messages.fields_for_step', ['step' => $step]) }}</legend>
 
             @foreach ($stepFields as $field => $config)
                 @php
-                    $inputId = 'field-' . $field;
-                    $errorId = 'error-' . $field;
+                    $inputId = $idPrefix . '-field-' . $field;
+                    $errorId = $idPrefix . '-error-' . $field;
                     $errorKey = 'formData.' . $field;
                     $hasError = $errors->has($errorKey);
                     $isRequired = $this->isFieldRequired($config);
@@ -74,7 +77,7 @@
                             @if ($isRequired) required @endif
                         >
                             @if ($config['placeholder'] !== null || $config['default'] === '' || $config['default'] === null)
-                                <option value="">{{ $config['placeholder'] ?? 'Select an option' }}</option>
+                                <option value="">{{ $config['placeholder'] ?? __('livewire-multistep-form::messages.select_placeholder') }}</option>
                             @endif
                             @foreach ($config['options'] as $optionValue => $optionLabel)
                                 <option value="{{ $optionValue }}">{{ $optionLabel }}</option>
@@ -102,8 +105,10 @@
             @endforeach
         </fieldset>
     @else
-        <section aria-labelledby="multistep-review-heading">
-            <h2 id="multistep-review-heading" class="text-lg font-semibold">Review your information</h2>
+        <section aria-labelledby="{{ $reviewHeadingId }}">
+            <h2 id="{{ $reviewHeadingId }}" class="text-lg font-semibold">
+                {{ __('livewire-multistep-form::messages.review_title') }}
+            </h2>
 
             <dl class="mt-4 space-y-4">
                 @foreach ($this->reviewItems() as $item)
@@ -125,7 +130,7 @@
                 wire:loading.attr="disabled"
                 wire:target="previousStep"
             >
-                Previous step
+                {{ __('livewire-multistep-form::messages.previous') }}
                 <svg
                     wire:loading
                     wire:target="previousStep"
@@ -138,7 +143,9 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                 </svg>
-                <span wire:loading wire:target="previousStep" class="sr-only">Loading previous step</span>
+                <span wire:loading wire:target="previousStep" class="sr-only">
+                    {{ __('livewire-multistep-form::messages.loading_previous') }}
+                </span>
             </button>
         @endif
 
@@ -152,7 +159,7 @@
                     wire:loading.attr="disabled"
                     wire:target="nextStep"
                 >
-                    Continue
+                    {{ __('livewire-multistep-form::messages.continue') }}
                     <svg
                         wire:loading
                         wire:target="nextStep"
@@ -165,7 +172,9 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                     </svg>
-                    <span wire:loading wire:target="nextStep" class="sr-only">Loading next step</span>
+                    <span wire:loading wire:target="nextStep" class="sr-only">
+                        {{ __('livewire-multistep-form::messages.loading_next') }}
+                    </span>
                 </button>
             @else
                 <button
@@ -175,7 +184,7 @@
                     wire:loading.attr="disabled"
                     wire:target="submit"
                 >
-                    Submit
+                    {{ __('livewire-multistep-form::messages.submit') }}
                     <svg
                         wire:loading
                         wire:target="submit"
@@ -188,7 +197,9 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                     </svg>
-                    <span wire:loading wire:target="submit" class="sr-only">Submitting form</span>
+                    <span wire:loading wire:target="submit" class="sr-only">
+                        {{ __('livewire-multistep-form::messages.submitting') }}
+                    </span>
                 </button>
             @endif
         </div>
