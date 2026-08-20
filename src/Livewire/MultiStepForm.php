@@ -58,10 +58,10 @@ class MultiStepForm extends Component
         string $buttonColor = '#2563eb'
     ): void {
         $this->fields = $this->validateAndNormalizeFields($fields);
+        $this->resetFormData();
         $this->assertValidationRulesDefined();
         $this->primaryColor = $this->validateColor($primaryColor, 'primaryColor');
         $this->buttonColor = $this->validateColor($buttonColor, 'buttonColor');
-        $this->resetFormData();
     }
 
     public function nextStep(): void
@@ -89,7 +89,11 @@ class MultiStepForm extends Component
 
     public function submit(): void
     {
-        $validated = $this->validateFields($this->fields);
+        if (! $this->isReviewStep()) {
+            return;
+        }
+
+        $validated = $this->validateFields($this->fields, returnToErrorStep: true);
 
         /** @var array<string, mixed> $data */
         $data = $validated['formData'] ?? [];
@@ -201,7 +205,7 @@ class MultiStepForm extends Component
      * @param  array<string, FieldConfig>  $fields
      * @return array<string, mixed>
      */
-    protected function validateFields(array $fields): array
+    protected function validateFields(array $fields, bool $returnToErrorStep = false): array
     {
         try {
             return $this->validate(
@@ -210,7 +214,15 @@ class MultiStepForm extends Component
                 $this->attributeLabels()
             );
         } catch (ValidationException $exception) {
-            $this->dispatchFocusForFirstError($exception);
+            $field = $this->firstConfiguredErrorField($exception);
+
+            if ($returnToErrorStep && $field !== null) {
+                $this->step = $this->fields[$field]['step'];
+            }
+
+            if ($field !== null) {
+                $this->dispatchFocusField($field);
+            }
 
             throw $exception;
         }
@@ -224,25 +236,30 @@ class MultiStepForm extends Component
         );
     }
 
-    protected function dispatchFocusForFirstError(ValidationException $exception): void
+    protected function dispatchFocusField(string $field): void
     {
-        $errorKey = array_key_first($exception->errors());
-
-        if (! is_string($errorKey) || ! str_starts_with($errorKey, 'formData.')) {
-            return;
-        }
-
-        $field = substr($errorKey, strlen('formData.'));
-
-        if (! array_key_exists($field, $this->fields)) {
-            return;
-        }
-
         $this->dispatch(
             'multistep-focus-field',
             instanceId: $this->getId(),
             field: $field
         );
+    }
+
+    protected function firstConfiguredErrorField(ValidationException $exception): ?string
+    {
+        $errorKey = array_key_first($exception->errors());
+
+        if (! is_string($errorKey) || ! str_starts_with($errorKey, 'formData.')) {
+            return null;
+        }
+
+        $field = substr($errorKey, strlen('formData.'));
+
+        if (! array_key_exists($field, $this->fields)) {
+            return null;
+        }
+
+        return $field;
     }
 
     /**
@@ -272,14 +289,6 @@ class MultiStepForm extends Component
         }
 
         return $rules;
-    }
-
-    /**
-     * @return array<string, array<int, mixed>>
-     */
-    protected function allRules(): array
-    {
-        return $this->rulesForFields($this->fields);
     }
 
     /**
