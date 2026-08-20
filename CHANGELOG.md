@@ -2,9 +2,11 @@
 
 All notable changes to this package will be documented in this file.
 
-The project follows Semantic Versioning once tagged stable releases begin.
+The project follows Semantic Versioning for tagged stable releases.
 
 ## [Unreleased]
+
+## [1.0.0] - 2026-08-20
 
 ### Added
 
@@ -18,9 +20,10 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - English, Dutch, and French package translations.
 - Publish tags for package views and translations.
 - Instance-scoped DOM IDs for multiple wizard instances on the same page.
-- Accessible progress, validation, form, button, and review semantics.
-- Pest regression coverage for configuration, security, submission event payloads, select behavior, multi-instance markup, translation parity, and accessibility.
-- Latest and minimum Laravel 12/13 + Livewire 3/4 compatibility matrices, including PHP 8.4 and Livewire 3 upper-bound PHP 8.5 coverage.
+- Accessible progress, validation, form, button, review, and keyboard focus semantics.
+- Instance-scoped focus management after navigation, resets, successful submissions, and validation failures.
+- Pest regression coverage for configuration, security, submission event payloads, select behavior, multi-instance markup, translation parity, accessibility, review-gated submission, dynamic server rules, and regex rules.
+- Latest and minimum Laravel 12/13 + Livewire 3/4 compatibility matrices, including Livewire 3 upper-bound PHP 8.5 coverage.
 - Larastan level 8, Pint, Composer validation, Composer audit, Dependabot, and an aggregate `Required checks` CI status.
 
 ### Fixed
@@ -36,8 +39,13 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - Select review output showing internal option keys instead of labels.
 - Boolean and floating-point select defaults being ambiguously coerced to browser string values.
 - Duplicate DOM IDs when multiple wizard instances are rendered on the same page.
+- Focus events using a payload key that conflicted with Livewire 4 component internals.
+- Native form submission on an input step being able to bypass the review step.
+- Direct final submission being callable before the review step.
+- Final review revalidation errors remaining on the review screen where their input controls were not rendered.
+- Server-only validation rules being evaluated before configured form defaults were initialized.
 - Production package structure containing a full Laravel application skeleton and unused frontend build files.
 
 ## Release process
 
-A versioned section will be created from `Unreleased` when the first tagged stable release is prepared. Do not infer a package version from this file until a matching Git tag exists.
+Stable versions are derived from Git tags. The repository release workflow reads the version from `VERSION`, creates the matching `vX.Y.Z` GitHub release, attempts the corresponding Packagist create/update operation when repository secrets are configured, and removes non-`main` branches after the release run.
