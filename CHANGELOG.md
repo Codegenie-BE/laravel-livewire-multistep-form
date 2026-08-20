@@ -19,8 +19,8 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - Publish tags for package views and translations.
 - Instance-scoped DOM IDs for multiple wizard instances on the same page.
 - Accessible progress, validation, form, button, and review semantics.
-- Pest regression coverage for configuration, security, submission, select behavior, and accessibility.
-- Latest and minimum Laravel 12/13 + Livewire 3/4 compatibility matrices, including PHP 8.4 coverage.
+- Pest regression coverage for configuration, security, submission event payloads, select behavior, multi-instance markup, translation parity, and accessibility.
+- Latest and minimum Laravel 12/13 + Livewire 3/4 compatibility matrices, including PHP 8.4 and Livewire 3 upper-bound PHP 8.5 coverage.
 - Larastan level 8, Pint, Composer validation, Composer audit, Dependabot, and an aggregate `Required checks` CI status.
 
 ### Fixed
@@ -34,6 +34,7 @@ The project follows Semantic Versioning once tagged stable releases begin.
 - Select values being accepted when they were not part of the configured options.
 - Select allow-list validation running as a second validator instead of the main field validation pass.
 - Select review output showing internal option keys instead of labels.
+- Boolean and floating-point select defaults being ambiguously coerced to browser string values.
 - Duplicate DOM IDs when multiple wizard instances are rendered on the same page.
 - Production package structure containing a full Laravel application skeleton and unused frontend build files.
 
