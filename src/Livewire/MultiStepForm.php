@@ -3,7 +3,6 @@
 namespace Codegenie\LivewireMultistepForm\Livewire;
 
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Livewire\Attributes\Locked;
@@ -58,6 +57,7 @@ class MultiStepForm extends Component
         string $buttonColor = '#2563eb'
     ): void {
         $this->fields = $this->validateAndNormalizeFields($fields);
+        $this->assertValidationRulesDefined();
         $this->primaryColor = $this->validateColor($primaryColor, 'primaryColor');
         $this->buttonColor = $this->validateColor($buttonColor, 'buttonColor');
         $this->resetFormData();
@@ -87,7 +87,6 @@ class MultiStepForm extends Component
     public function submit(): void
     {
         $validated = $this->validate($this->allRules(), [], $this->attributeLabels());
-        $this->validateSelectValues($this->fields);
 
         /** @var array<string, mixed> $data */
         $data = $validated['formData'] ?? [];
@@ -167,6 +166,21 @@ class MultiStepForm extends Component
     }
 
     /**
+     * Add Laravel validation rules that must remain server-side.
+     *
+     * Keys are configured field names without the formData prefix. Values may
+     * use any rule shape accepted by Laravel's validator, including rule
+     * objects and closures. These rules are rebuilt on every request and are
+     * never stored in the public Livewire field configuration.
+     *
+     * @return array<string, mixed>
+     */
+    protected function serverValidationRules(): array
+    {
+        return [];
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     protected function handleSubmission(array $data): void
@@ -179,24 +193,39 @@ class MultiStepForm extends Component
         $fields = $this->currentStepFields();
 
         $this->validate($this->rulesForFields($fields), [], $this->attributeLabels());
-        $this->validateSelectValues($fields);
     }
 
     /**
      * @param  array<string, FieldConfig>  $fields
-     * @return array<string, string|array<array-key, string>>
+     * @return array<string, array<int, mixed>>
      */
     protected function rulesForFields(array $fields): array
     {
-        return collect($fields)
-            ->mapWithKeys(fn (array $config, string $field): array => [
-                "formData.{$field}" => $config['rules'],
-            ])
-            ->all();
+        $serverRules = $this->validatedServerValidationRules();
+        $rules = [];
+
+        foreach ($fields as $field => $config) {
+            $fieldRules = $this->ruleList($config['rules']);
+
+            if (array_key_exists($field, $serverRules)) {
+                $fieldRules = [
+                    ...$fieldRules,
+                    ...$this->ruleList($serverRules[$field]),
+                ];
+            }
+
+            if ($config['type'] === 'select') {
+                $fieldRules[] = Rule::in(array_keys($config['options']));
+            }
+
+            $rules["formData.{$field}"] = $fieldRules;
+        }
+
+        return $rules;
     }
 
     /**
-     * @return array<string, string|array<array-key, string>>
+     * @return array<string, array<int, mixed>>
      */
     protected function allRules(): array
     {
@@ -285,10 +314,10 @@ class MultiStepForm extends Component
             throw new InvalidArgumentException("Field [{$field}] uses an unsupported type.");
         }
 
-        $rules = $config['rules'] ?? null;
+        $rules = $config['rules'] ?? [];
 
-        if (! $this->hasValidRules($rules)) {
-            throw new InvalidArgumentException("Field [{$field}] must define validation rules as a string or an array of strings.");
+        if (! $this->hasValidConfiguredRules($rules)) {
+            throw new InvalidArgumentException("Field [{$field}] must define validation rules as a string or an array of strings when provided.");
         }
 
         $label = $config['label'] ?? ucfirst(str_replace('_', ' ', $field));
@@ -330,13 +359,13 @@ class MultiStepForm extends Component
     /**
      * @phpstan-assert-if-true string|array<array-key, string> $rules
      */
-    protected function hasValidRules(mixed $rules): bool
+    protected function hasValidConfiguredRules(mixed $rules): bool
     {
         if (is_string($rules)) {
             return trim($rules) !== '';
         }
 
-        if (! is_array($rules) || $rules === []) {
+        if (! is_array($rules)) {
             return false;
         }
 
@@ -347,6 +376,69 @@ class MultiStepForm extends Component
         }
 
         return true;
+    }
+
+    protected function assertValidationRulesDefined(): void
+    {
+        $serverRules = $this->validatedServerValidationRules();
+
+        foreach ($this->fields as $field => $config) {
+            if ($this->ruleList($config['rules']) !== []) {
+                continue;
+            }
+
+            if (array_key_exists($field, $serverRules)) {
+                continue;
+            }
+
+            throw new InvalidArgumentException("Field [{$field}] must define configured rules or server validation rules.");
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function validatedServerValidationRules(): array
+    {
+        $rules = $this->serverValidationRules();
+
+        foreach ($rules as $field => $fieldRules) {
+            if (! is_string($field) || ! array_key_exists($field, $this->fields)) {
+                $name = is_string($field) ? $field : (string) $field;
+
+                throw new InvalidArgumentException("Server validation rules reference unknown field [{$name}].");
+            }
+
+            if ($this->ruleList($fieldRules) === []) {
+                throw new InvalidArgumentException("Server validation rules for field [{$field}] may not be empty.");
+            }
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    protected function ruleList(mixed $rules): array
+    {
+        if ($rules === null || $rules === []) {
+            return [];
+        }
+
+        if (is_string($rules)) {
+            return trim($rules) === '' ? [] : [$rules];
+        }
+
+        if (is_array($rules)) {
+            return array_values($rules);
+        }
+
+        if (is_object($rules)) {
+            return [$rules];
+        }
+
+        throw new InvalidArgumentException('Server validation rules must use rule shapes supported by Laravel.');
     }
 
     /**
@@ -393,30 +485,6 @@ class MultiStepForm extends Component
         }
 
         return $value;
-    }
-
-    /**
-     * @param  array<string, FieldConfig>  $fields
-     */
-    protected function validateSelectValues(array $fields): void
-    {
-        $rules = collect($fields)
-            ->filter(fn (array $config): bool => $config['type'] === 'select')
-            ->mapWithKeys(fn (array $config, string $field): array => [
-                "formData.{$field}" => ['nullable', Rule::in(array_keys($config['options']))],
-            ])
-            ->all();
-
-        if ($rules === []) {
-            return;
-        }
-
-        Validator::make(
-            ['formData' => $this->formData],
-            $rules,
-            [],
-            $this->attributeLabels()
-        )->validate();
     }
 
     /**
