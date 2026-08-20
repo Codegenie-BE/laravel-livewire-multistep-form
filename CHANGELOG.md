@@ -48,4 +48,4 @@ The project follows Semantic Versioning for tagged stable releases.
 
 ## Release process
 
-Stable versions are derived from Git tags. The repository release workflow reads the version from `VERSION`, creates the matching `vX.Y.Z` GitHub release, attempts the corresponding Packagist create/update operation when repository secrets are configured, and removes non-`main` branches after the release run.
+Stable versions are derived from Git tags. The repository release workflow reads the version from `VERSION`, creates or reuses the matching `vX.Y.Z` tag and GitHub release, verifies that Packagist's GitHub auto-update integration exposes the exact tag and source commit, and removes non-`main` branches after the release run. Packagist itself is configured once through its normal GitHub integration; no Packagist API tokens are stored in this repository.
