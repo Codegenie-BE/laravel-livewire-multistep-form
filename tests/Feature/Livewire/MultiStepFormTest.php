@@ -1,7 +1,6 @@
 <?php
 
 use Codegenie\LivewireMultistepForm\Livewire\MultiStepForm;
-use InvalidArgumentException;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 
