@@ -375,7 +375,7 @@ class MultiStepForm extends Component
     /**
      * @param  array<string, string>  $options
      */
-    protected function normalizeSelectDefault(string $field, mixed $default, array $options): string|null
+    protected function normalizeSelectDefault(string $field, mixed $default, array $options): ?string
     {
         if ($default === null || $default === '') {
             return $default;
