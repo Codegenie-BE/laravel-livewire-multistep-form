@@ -9,6 +9,7 @@
         "livewire",
         "multi-step-form"
     ],
+    "homepage": "https://github.com/Codegenie-BE/laravel-livewire-multistep-form",
     "license": "MIT",
     "authors": [
         {
@@ -16,12 +17,17 @@
             "homepage": "https://www.codegenie.be"
         }
     ],
+    "support": {
+        "issues": "https://github.com/Codegenie-BE/laravel-livewire-multistep-form/issues",
+        "source": "https://github.com/Codegenie-BE/laravel-livewire-multistep-form"
+    },
     "require": {
         "php": "^8.2",
         "illuminate/support": "^12.0 || ^13.0",
         "livewire/livewire": "^3.6 || ^4.0"
     },
     "require-dev": {
+        "larastan/larastan": "^3.10",
         "laravel/framework": "^12.0 || ^13.0",
         "laravel/pint": "^1.24",
         "orchestra/testbench": "^10.0 || ^11.0",
@@ -40,7 +46,9 @@
     },
     "scripts": {
         "test": "pest",
-        "format": "pint --test src tests"
+        "format": "pint --test src tests",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "audit": "composer audit"
     },
     "extra": {
         "laravel": {
