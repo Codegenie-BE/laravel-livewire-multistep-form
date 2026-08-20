@@ -20,13 +20,13 @@ GitHub Actions verifies both recent and minimum resolvable dependency sets. The 
 
 ## Installation
 
-The Composer package name is:
+Install the stable package through Composer:
 
-```text
-codegenie-be/laravel-livewire-multistep-form
+```bash
+composer require codegenie-be/laravel-livewire-multistep-form
 ```
 
-Until the first tagged Packagist release is published, install the repository as a Composer VCS package:
+If Packagist or a Composer mirror has not indexed the newest release yet, the repository can still be installed directly as a VCS package:
 
 ```bash
 composer config repositories.codegenie-livewire-multistep-form vcs https://github.com/Codegenie-BE/laravel-livewire-multistep-form
@@ -107,7 +107,18 @@ Select defaults may only be strings, integers, or `null`; integer defaults are n
 
 ## Validation
 
-`nextStep()` validates only the fields on the current step. `submit()` validates the complete form again, so directly invoking the submission action cannot bypass previous steps. Select values are constrained to their configured option keys as part of that same validation pass.
+`nextStep()` validates only the fields on the current step. Native form submission on an input step, including pressing Enter in a compatible control, is routed through `nextStep()` rather than final submission.
+
+`submit()` is accepted only on the dynamic review step and validates the complete form again. A direct attempt to invoke final submission before the review step is ignored server-side. If final revalidation fails, the wizard returns to the step containing the first invalid configured field and requests focus for that field. Select values are constrained to their configured option keys as part of the same validation pass.
+
+For Laravel rules containing pipe characters as part of the rule itself, such as a regular expression, use array rule syntax:
+
+```php
+'rules' => [
+    'required',
+    'regex:/^(foo|bar)$/',
+],
+```
 
 ### Server-only Laravel rules
 
@@ -138,7 +149,7 @@ class ContactWizard extends MultiStepForm
 
 The returned rules are rebuilt on each Livewire request and merged with the declarative field rules. Laravel rule objects and closures can therefore be used without placing them in public Livewire state. A server-only rule may only target a configured field; unknown field names are rejected instead of silently validating unrelated data.
 
-A field may also leave `rules` empty and define its complete validation contract in `serverValidationRules()`. If native browser `required` semantics are desired, keep a simple `required` rule in the declarative field configuration as well; the server remains authoritative either way.
+Configured defaults are initialized before `serverValidationRules()` is first evaluated during mount, so server-only rules may safely inspect default-driven `formData` values. A field may also leave `rules` empty and define its complete validation contract in `serverValidationRules()`. If native browser `required` semantics are desired, keep a simple `required` rule in the declarative field configuration as well; the server remains authoritative either way.
 
 Validation errors use the same `formData.*` keys as the Livewire bindings and are rendered with accessible error relationships.
 
@@ -146,7 +157,7 @@ Validation errors use the same `formData.*` keys as the Livewire bindings and ar
 
 The base package deliberately does **not** write to a database, send mail, or redirect to an application-specific route. A reusable UI package should not decide how your application stores submitted data.
 
-On a valid submission it:
+On a valid review-step submission it:
 
 1. validates the complete form, including configured select allow-lists and server-only rules;
 2. calls the protected `handleSubmission(array $data)` extension point;
@@ -200,7 +211,7 @@ The published view is placed under:
 resources/views/vendor/livewire-multistep-form/
 ```
 
-When customizing it, preserve the validation bindings, escaped review output, instance-scoped DOM IDs, and accessibility relationships.
+When customizing it, preserve the validation bindings, review-step submission guard, escaped review output, instance-scoped DOM IDs, and accessibility relationships.
 
 ## Tailwind CSS
 
@@ -243,7 +254,7 @@ The package validates the color format. The consuming application remains respon
 - Declarative field rules are public Livewire state and should not contain sensitive application internals.
 - `serverValidationRules()` keeps complex or sensitive rule configuration server-side.
 - User-controlled form values remain mutable and are always validated server-side.
-- Submission validates the complete form again.
+- Final submission is accepted only on the review step and revalidates the complete form.
 - Select values are checked against their configured server-side option allow-lists.
 - Only configured and validated fields are passed to the submission hook.
 - Review values are escaped before rendering.
@@ -265,6 +276,7 @@ The default view includes:
 - alert semantics for validation errors;
 - explicit button types;
 - visible keyboard focus styles;
+- instance-scoped focus management after navigation, resets, submissions, and validation failures;
 - reduced-motion-aware transitions and loading indicators;
 - localized screen-reader and interface copy.
 
@@ -295,7 +307,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Keep changes focused and Laravel-native.
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for notable changes prepared for the first stable release.
+See [CHANGELOG.md](CHANGELOG.md) for stable release notes and unreleased changes.
 
 ## License
 

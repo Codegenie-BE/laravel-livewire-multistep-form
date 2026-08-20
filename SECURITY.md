@@ -2,7 +2,12 @@
 
 ## Supported versions
 
-Before the first stable tagged release, security fixes are maintained on the current `main` branch. After stable releases begin, this document will list the supported release lines explicitly.
+The current `1.x` release line receives security fixes. Security fixes are prepared on `main` and released as patched stable versions when necessary.
+
+| Version | Supported |
+| --- | --- |
+| `1.x` | yes |
+| pre-`1.0.0` revisions | no |
 
 ## Reporting a vulnerability
 
@@ -21,7 +26,8 @@ This package is responsible for the security properties of its own wizard compon
 - select option allow-list enforcement;
 - escaped review output;
 - safe handling of configured visual color values;
-- limiting the submission payload to validated configured fields.
+- limiting the submission payload to validated configured fields;
+- requiring the review step before final submission.
 
 The consuming Laravel application remains responsible for authorization, authentication, persistence, rate limiting, CSRF/session configuration, mail delivery, privacy notices, retention policies, and any domain-specific validation or access control.
 

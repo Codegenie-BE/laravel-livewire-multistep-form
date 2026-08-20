@@ -1,0 +1,140 @@
+name: Release
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - VERSION
+
+permissions:
+    contents: write
+
+jobs:
+    release:
+        name: Publish stable release
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        env:
+            PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+            PACKAGIST_MAIN_TOKEN: ${{ secrets.PACKAGIST_MAIN_TOKEN }}
+            PACKAGIST_SAFE_TOKEN: ${{ secrets.PACKAGIST_SAFE_TOKEN }}
+            PACKAGIST_API_TOKEN: ${{ secrets.PACKAGIST_API_TOKEN }}
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+
+            - name: Read release version
+              id: metadata
+              shell: bash
+              run: |
+                  version="$(tr -d '[:space:]' < VERSION)"
+
+                  if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+                      echo "::error::VERSION does not contain a valid semantic version: $version"
+                      exit 1
+                  fi
+
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+            - name: Create version tag
+              env:
+                  TAG: ${{ steps.metadata.outputs.tag }}
+              shell: bash
+              run: |
+                  if git rev-parse "$TAG" >/dev/null 2>&1; then
+                      echo "::error::Tag $TAG already exists"
+                      exit 1
+                  fi
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git tag -a "$TAG" "$GITHUB_SHA" -m "$TAG"
+                  git push origin "$TAG"
+
+            - name: Publish or update Packagist
+              id: packagist
+              continue-on-error: true
+              env:
+                  REPOSITORY_URL: https://github.com/Codegenie-BE/laravel-livewire-multistep-form
+                  PACKAGE_METADATA_URL: https://repo.packagist.org/p2/codegenie-be/laravel-livewire-multistep-form.json
+              shell: bash
+              run: |
+                  username="${PACKAGIST_USERNAME:-codegenie-be}"
+                  status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PACKAGE_METADATA_URL" || true)"
+
+                  if [[ "$status" == "200" ]]; then
+                      token="${PACKAGIST_SAFE_TOKEN:-${PACKAGIST_MAIN_TOKEN:-${PACKAGIST_API_TOKEN:-}}}"
+
+                      if [[ -z "$token" ]]; then
+                          echo "::error::Packagist package exists, but no SAFE or MAIN API token is configured in GitHub Actions secrets."
+                          exit 2
+                      fi
+
+                      curl --fail-with-body --silent --show-error \
+                          --request POST \
+                          --header 'Content-Type: application/json' \
+                          --header "Authorization: Bearer ${username}:${token}" \
+                          --header 'User-Agent: Codegenie-Packagist-Publisher/1.0' \
+                          https://packagist.org/api/update-package \
+                          --data "{\"repository\":\"$REPOSITORY_URL\"}"
+
+                      echo "operation=updated" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+
+                  token="${PACKAGIST_MAIN_TOKEN:-${PACKAGIST_API_TOKEN:-}}"
+
+                  if [[ -z "$token" ]]; then
+                      echo "::error::The package is not yet on Packagist and no MAIN API token is configured in GitHub Actions secrets."
+                      exit 2
+                  fi
+
+                  curl --fail-with-body --silent --show-error \
+                      --request POST \
+                      --header 'Content-Type: application/json' \
+                      --header "Authorization: Bearer ${username}:${token}" \
+                      --header 'User-Agent: Codegenie-Packagist-Publisher/1.0' \
+                      https://packagist.org/api/create-package \
+                      --data "{\"repository\":\"$REPOSITORY_URL\"}"
+
+                  echo "operation=created" >> "$GITHUB_OUTPUT"
+
+            - name: Create GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ steps.metadata.outputs.tag }}
+              shell: bash
+              run: |
+                  gh release create "$TAG" \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --target "$GITHUB_SHA" \
+                      --title "$TAG" \
+                      --generate-notes
+
+            - name: Report Packagist status
+              if: steps.packagist.outcome != 'success'
+              shell: bash
+              run: |
+                  echo "::warning::GitHub release was created, but Packagist could not be created/updated automatically. Configure PACKAGIST_MAIN_TOKEN for first publication or a SAFE/MAIN token for updates."
+
+            - name: Delete every non-main branch
+              if: always()
+              shell: bash
+              run: |
+                  git ls-remote --heads origin \
+                      | awk '{print $2}' \
+                      | sed 's#refs/heads/##' \
+                      | while IFS= read -r branch; do
+                          if [[ -z "$branch" || "$branch" == "main" ]]; then
+                              continue
+                          fi
+
+                          echo "Deleting branch: $branch"
+                          git push origin --delete "$branch" || echo "::warning::Could not delete branch $branch"
+                      done
