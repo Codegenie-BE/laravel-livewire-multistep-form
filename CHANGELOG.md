@@ -6,6 +6,14 @@ The project follows Semantic Versioning for tagged stable releases.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-08-29
+
+### Fixed
+
+- Optional select fields now accept the reserved empty placeholder value when their Laravel validation rules permit an empty value, while required selects continue to reject it and non-empty values remain constrained to configured options.
+- Release publication now fails when an existing version tag points to another commit instead of silently publishing mismatched source.
+- Release publication no longer deletes unrelated non-`main` branches after a release.
+
 ## [1.0.0] - 2026-08-20
 
 ### Added
@@ -48,4 +56,4 @@ The project follows Semantic Versioning for tagged stable releases.
 
 ## Release process
 
-Stable versions are derived from Git tags. The repository release workflow reads the version from `VERSION`, creates or reuses the matching `vX.Y.Z` tag and GitHub release, verifies that Packagist's GitHub auto-update integration exposes the exact tag and source commit, and removes non-`main` branches after the release run. Packagist itself is configured once through its normal GitHub integration; no Packagist API tokens are stored in this repository.
+Stable versions are derived from Git tags. The repository release workflow reads the version from `VERSION`, requires the matching `vX.Y.Z` tag to resolve to the release commit, creates the tag and GitHub release when needed, and verifies that Packagist's GitHub auto-update integration exposes the exact tag and source commit. Packagist itself is configured once through its normal GitHub integration; no Packagist API tokens are stored in this repository.

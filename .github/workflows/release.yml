@@ -28,6 +28,7 @@ jobs:
               id: metadata
               shell: bash
               run: |
+                  set -euo pipefail
                   version="$(tr -d '[:space:]' < VERSION)"
 
                   if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
@@ -44,10 +45,17 @@ jobs:
                   TAG: ${{ steps.metadata.outputs.tag }}
               shell: bash
               run: |
+                  set -euo pipefail
                   git fetch --tags --force
 
                   if git rev-parse "$TAG" >/dev/null 2>&1; then
                       release_commit="$(git rev-list --max-count=1 "$TAG")"
+
+                      if [[ "$release_commit" != "$GITHUB_SHA" ]]; then
+                          echo "::error::Tag $TAG already points to $release_commit instead of release commit $GITHUB_SHA."
+                          exit 1
+                      fi
+
                       echo "Tag $TAG already exists at $release_commit."
                   else
                       git config user.name "github-actions[bot]"
@@ -66,6 +74,8 @@ jobs:
                   TAG: ${{ steps.metadata.outputs.tag }}
               shell: bash
               run: |
+                  set -euo pipefail
+
                   if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
                       echo "GitHub release $TAG already exists."
                       exit 0
@@ -84,6 +94,7 @@ jobs:
                   PACKAGE_METADATA_URL: https://repo.packagist.org/p2/codegenie-be/laravel-livewire-multistep-form.json
               shell: bash
               run: |
+                  set -euo pipefail
                   status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "$PACKAGE_METADATA_URL" || true)"
 
                   if [[ "$status" != "200" ]]; then
@@ -107,19 +118,3 @@ jobs:
 
                   echo "::error::Packagist knows this package but did not expose $RELEASE_TAG at $RELEASE_COMMIT within five minutes. Check the Packagist GitHub auto-update integration."
                   exit 1
-
-            - name: Delete every non-main branch
-              if: always()
-              shell: bash
-              run: |
-                  git ls-remote --heads origin \
-                      | awk '{print $2}' \
-                      | sed 's#refs/heads/##' \
-                      | while IFS= read -r branch; do
-                          if [[ -z "$branch" || "$branch" == "main" ]]; then
-                              continue
-                          fi
-
-                          echo "Deleting branch: $branch"
-                          git push origin --delete "$branch" || echo "::warning::Could not delete branch $branch"
-                      done

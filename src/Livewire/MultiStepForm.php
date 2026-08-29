@@ -282,7 +282,7 @@ class MultiStepForm extends Component
             }
 
             if ($config['type'] === 'select') {
-                $fieldRules[] = Rule::in(array_keys($config['options']));
+                $fieldRules[] = Rule::in(['', ...array_keys($config['options'])]);
             }
 
             $rules["formData.{$field}"] = $fieldRules;
